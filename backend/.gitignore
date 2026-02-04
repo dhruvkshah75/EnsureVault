@@ -1,0 +1,13 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual Environment (uv manages this)
+.venv/
+
+# Environment Variables (Keep secrets local!)
+.env
+
+# IDE settings
+.vscode/
+.idea/
