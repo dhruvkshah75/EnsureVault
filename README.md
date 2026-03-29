@@ -1,5 +1,8 @@
-# EnsureVault 
+# EnsureVault
+
 **`EnsureVault` (Insurance Policy & Claims Processing System)** is a centralized database-driven application designed to automate the management of insurance policies, customer portfolios, and claim settlements. This project is built as part of the **CSF212 - Database Systems** course at **BITS Pilani, Goa Campus**.
+
+**EnsureVault** is an end-to-end, resilient relational database project that accurately maps the complex lifecycle of an insurance company—from product setup to customer acquisition, policy maintenance, and claim adjudication. It features a highly normalized schema (3NF/BCNF) and a modular architecture. The system enforces strict Role-Based Access Control (RBAC) across four key personas (Administrator, Agent, Customer, and Claims Manager) to guarantee data integrity, track all financial transactions via explicit contracts, and simulate real-world workflows.
 
 ---
 
