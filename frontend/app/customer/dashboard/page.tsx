@@ -7,10 +7,10 @@ export default function CustomerDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Customer Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Welcome back. Here's an overview of your portfolio.</p>
+          <p className="text-muted-foreground mt-2">Welcome back. Here&apos;s an overview of your portfolio.</p>
         </div>
-        <Link 
-          href="/customer/claims/new" 
+        <Link
+          href="/customer/claims/new"
           className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-full font-medium transition-colors shadow-lg shadow-primary/25 flex items-center gap-2"
         >
           <AlertCircle className="w-5 h-5" /> Report Incident
@@ -64,7 +64,7 @@ export default function CustomerDashboard() {
                 <p className="text-sm text-muted-foreground">Submitted 2 days ago. Awaiting adjuster review.</p>
               </div>
             </div>
-            
+
             <div className="p-4 rounded-xl border border-white/10 bg-white/5 dark:bg-black/20 opacity-70">
               <div className="flex justify-between items-start">
                 <div>
@@ -72,7 +72,7 @@ export default function CustomerDashboard() {
                   <p className="text-sm text-muted-foreground">Claim #CLM-8834</p>
                 </div>
                 <span className="px-3 py-1 bg-gray-500/10 text-gray-600 dark:text-gray-400 rounded-full text-xs font-medium border border-gray-500/20">
-                 Closed
+                  Closed
                 </span>
               </div>
             </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ShieldAlert } from "lucide-react";
 
 export default function CreatePolicy() {
@@ -55,9 +54,9 @@ export default function CreatePolicy() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Coverage Rules & Conditions</label>
-          <textarea 
-            required 
-            rows={4} 
+          <textarea
+            required
+            rows={4}
             className="w-full bg-white/5 border border-white/10 rounded-lg p-3 outline-none focus:ring-2 focus:ring-secondary transition-all placeholder:text-muted-foreground"
             placeholder="Define the specific rules and exclusions for this policy..."
           />
