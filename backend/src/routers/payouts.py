@@ -1,0 +1,221 @@
+from fastapi import APIRouter, Depends, HTTPException
+from mysql.connector import MySQLConnection
+from pydantic import BaseModel, Field
+from enum import Enum
+from typing import Any
+from src.database import get_db
+from src.models.common import APIResponse
+
+router = APIRouter(prefix="/payouts", tags=["Payouts & Finance"])
+
+
+class PaymentMode(str, Enum):
+    CREDIT_CARD = "Credit Card"
+    DEBIT_CARD = "Debit Card"
+    UPI = "UPI"
+    NET_BANKING = "Net Banking"
+    CASH = "Cash"
+
+
+class ApproveclaimRequest(BaseModel):
+    payout_amount: float = Field(..., gt=0, description="Amount to pay out to the customer")
+    payment_mode: PaymentMode = Field(..., description="Mode of payment for the payout")
+
+
+class PremiumPaymentRequest(BaseModel):
+    payment_mode: PaymentMode = Field(..., description="Mode of payment for the premium")
+
+
+# ---------------------------------------------------------------
+# POST /api/v1/payouts/claims/{claim_id}/approve
+# Atomically approves a claim AND inserts a payment record.
+# Rolls back everything if any step fails.
+# ---------------------------------------------------------------
+@router.post("/claims/{claim_id}/approve", response_model=APIResponse)
+def approve_claim(
+    claim_id: int,
+    body: ApproveclaimRequest,
+    db: MySQLConnection = Depends(get_db),
+):
+    """
+    Approve a claim and insert a payout record atomically.
+    Uses START TRANSACTION / COMMIT / ROLLBACK to ensure both
+    the claim status update and payment insertion succeed together,
+    or neither is saved. (Claims Manager / Admin)
+    """
+    cursor = db.cursor(dictionary=True)
+
+    # --- Pre-flight checks (outside transaction) ---
+
+    # 1. Verify claim exists and is in a reviewable state
+    cursor.execute(
+        "SELECT cl.claim_id, cl.status, cl.claim_amount, p.policy_id "
+        "FROM claim cl "
+        "JOIN policy p ON cl.policy_id = p.policy_id "
+        "WHERE cl.claim_id = %s",
+        (claim_id,),
+    )
+    claim: Any = cursor.fetchone()
+    
+    if claim is None:
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Claim {claim_id} not found")
+
+    if claim["status"] not in ("Pending", "Under Review"):
+        cursor.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Claim is already '{claim['status']}' and cannot be approved again",
+        )
+
+    # 2. Verify payout amount does not exceed max coverage for this policy
+    cursor.execute(
+        "SELECT pt.max_coverage FROM policy p "
+        "JOIN policy_type pt ON p.type_id = pt.type_id "
+        "WHERE p.policy_id = %s",
+        (claim["policy_id"],),
+    )
+    coverage: Any = cursor.fetchone()
+    
+    if not coverage or body.payout_amount > coverage["max_coverage"]:
+        cursor.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payout amount exceeds max coverage of {coverage['max_coverage']}",
+        )
+
+    # --- ATOMIC TRANSACTION ---
+    try:
+        db.start_transaction()
+
+        # Step 1: Update claim status to Approved
+        cursor.execute(
+            "UPDATE claim SET status = 'Approved' WHERE claim_id = %s",
+            (claim_id,),
+        )
+
+        # Step 2: Insert payout record into payment table
+        cursor.execute(
+            """
+            INSERT INTO payment (policy_id, amount, payment_date, payment_mode, status)
+            VALUES (%s, %s, CURDATE(), %s, 'Success')
+            """,
+            (claim["policy_id"], body.payout_amount, body.payment_mode.value),
+        )
+        new_txn_id = cursor.lastrowid
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transaction failed and was rolled back: {str(e)}",
+        )
+
+    cursor.close()
+
+    return APIResponse(
+        success=True,
+        message=f"Claim {claim_id} approved and payout of {body.payout_amount} processed",
+        data={"claim_id": claim_id, "txn_id": new_txn_id, "payout_amount": body.payout_amount},
+    )
+
+
+# ---------------------------------------------------------------
+# POST /api/v1/payouts/policies/{policy_id}/pay-premium
+# Records a premium payment for a policy atomically.
+# ---------------------------------------------------------------
+@router.post("/policies/{policy_id}/pay-premium", response_model=APIResponse)
+def pay_premium(
+    policy_id: int,
+    body: PremiumPaymentRequest,
+    db: MySQLConnection = Depends(get_db),
+):
+    """
+    Record a premium payment for an active policy atomically.
+    Inserts a payment record and updates policy status if needed.
+    Rolls back everything if any step fails. (Customer / Agent)
+    """
+    cursor = db.cursor(dictionary=True)
+
+    # Verify policy exists and is active
+    cursor.execute(
+        "SELECT policy_id, status, premium_amount FROM policy WHERE policy_id = %s",
+        (policy_id,),
+    )
+    policy: Any = cursor.fetchone()
+
+    if not policy:
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Policy {policy_id} not found")
+
+    if policy["status"] != "Active":
+        cursor.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Policy is '{policy['status']}' — only Active policies can receive premium payments",
+        )
+
+    # --- ATOMIC TRANSACTION ---
+    try:
+        db.start_transaction()
+
+        # Insert premium payment record
+        cursor.execute(
+            """
+            INSERT INTO payment (policy_id, amount, payment_date, payment_mode, status)
+            VALUES (%s, %s, CURDATE(), %s, 'Success')
+            """,
+            (policy_id, policy["premium_amount"], body.payment_mode.value),
+        )
+        new_txn_id = cursor.lastrowid
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transaction failed and was rolled back: {str(e)}",
+        )
+
+    cursor.close()
+
+    return APIResponse(
+        success=True,
+        message=f"Premium payment of {policy['premium_amount']} recorded for policy {policy_id}",
+        data={"policy_id": policy_id, "txn_id": new_txn_id, "amount": policy["premium_amount"]},
+    )
+
+
+# ---------------------------------------------------------------
+# GET /api/v1/payouts/policies/{policy_id}/payments
+# List all payment records for a policy.
+# ---------------------------------------------------------------
+@router.get("/policies/{policy_id}/payments", response_model=APIResponse)
+def get_policy_payments(policy_id: int, db: MySQLConnection = Depends(get_db)):
+    """
+    Retrieve all payment transactions for a specific policy. (Agent, Admin)
+    """
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute("SELECT policy_id FROM policy WHERE policy_id = %s", (policy_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Policy {policy_id} not found")
+
+    cursor.execute(
+        "SELECT * FROM payment WHERE policy_id = %s ORDER BY payment_date DESC",
+        (policy_id,),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+
+    return APIResponse(
+        success=True,
+        message=f"Found {len(rows)} payment records",
+        data=rows,
+    )
