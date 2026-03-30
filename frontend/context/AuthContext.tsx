@@ -27,12 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
 
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem("ev_user");
-            if (stored) setUser(JSON.parse(stored));
-        } catch {
-            // ignore malformed storage
-        }
+        // Defer so setState is not called synchronously inside an effect
+        const t = setTimeout(() => {
+            try {
+                const stored = localStorage.getItem("ev_user");
+                if (stored) setUser(JSON.parse(stored));
+            } catch {
+                // ignore malformed storage
+            }
+        }, 0);
+        return () => clearTimeout(t);
     }, []);
 
     const login = (role: Role, info: Omit<AuthUser, "role">) => {

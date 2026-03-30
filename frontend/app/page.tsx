@@ -1,21 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ShieldCheck, Activity, Users, LogIn } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useEffect } from "react";
 
 export default function Home() {
   const { user } = useAuth();
-  const router = useRouter();
-
-  // If not logged in, redirect to login
-  useEffect(() => {
-    if (user === null) {
-      // Give a small delay for localStorage hydration
-    }
-  }, [user]);
 
   return (
     <div className="flex flex-col items-center justify-center py-20 animate-slide-up space-y-8">
