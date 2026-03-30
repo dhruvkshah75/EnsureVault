@@ -10,7 +10,8 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      # Mount the sql directory so MySQL executes schema -> seed -> procs in alphabetical order on first boot
+      # All .sql files in backend/sql/ are auto-executed in alphabetical order on first boot:
+      # 1. schema.sql → 2. seed.sql → 3. stored_procedures.sql → 4. triggers.sql
       - ./backend/sql:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppassword" ]
