@@ -1,5 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from mysql.connector import MySQLConnection
+from typing import Optional
+from datetime import date
 from src.database import get_db
 from src.models.claim import (
     ClaimDecisionRequest,
@@ -11,6 +14,72 @@ from src.models.claim import (
 from src.models.common import APIResponse
 
 router = APIRouter(prefix="/claims", tags=["Risk Assessment"])
+
+
+class ClaimCreate(BaseModel):
+    policy_id: int = Field(..., gt=0)
+    incident_date: date
+    claim_amount: float = Field(..., gt=0)
+
+
+@router.get("/", response_model=APIResponse)
+def list_claims(
+    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    db: MySQLConnection = Depends(get_db),
+):
+    """List all claims, optionally filtered by customer. (Customer, Agent, Admin)"""
+    query = """
+        SELECT
+            cl.claim_id, cl.policy_id, c.full_name AS customer_name,
+            pt.type_name AS policy_type, cl.incident_date,
+            cl.claim_amount, cl.status, cl.rejection_reason
+        FROM claim cl
+        JOIN policy p ON cl.policy_id = p.policy_id
+        JOIN customer c ON p.customer_id = c.customer_id
+        JOIN policy_type pt ON p.type_id = pt.type_id
+        WHERE 1=1
+    """
+    params = []
+    if customer_id:
+        query += " AND p.customer_id = %s"
+        params.append(customer_id)
+    query += " ORDER BY cl.claim_id DESC"
+
+    cursor = db.cursor(dictionary=True)
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    cursor.close()
+    return APIResponse(success=True, message=f"Found {len(rows)} claims", data=rows)
+
+
+@router.post("/", response_model=APIResponse, status_code=201)
+def create_claim(body: ClaimCreate, db: MySQLConnection = Depends(get_db)):
+    """Submit a new insurance claim for a given policy. (Customer)"""
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute("SELECT policy_id, status FROM policy WHERE policy_id = %s", (body.policy_id,))
+    policy = cursor.fetchone()
+    if not policy:
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Policy {body.policy_id} not found")
+    if policy["status"] != "Active":
+        cursor.close()
+        raise HTTPException(status_code=400, detail="Claims can only be filed on Active policies")
+
+    try:
+        cursor.execute(
+            "INSERT INTO claim (policy_id, incident_date, claim_amount, status) VALUES (%s, %s, %s, 'Pending')",
+            (body.policy_id, body.incident_date, body.claim_amount),
+        )
+        db.commit()
+        new_id = cursor.lastrowid
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    cursor.close()
+    return APIResponse(success=True, message="Claim submitted successfully", data={"claim_id": new_id})
 
 
 @router.get("/pending", response_model=APIResponse)
