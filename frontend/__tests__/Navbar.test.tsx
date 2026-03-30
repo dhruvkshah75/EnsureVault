@@ -6,12 +6,18 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }))
 
-// Mock AuthContext — default: no user (logged out)
+// Mock AuthContext — useAuth must be a jest.fn() to use mockReturnValueOnce
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ user: null, logout: jest.fn() }),
+  useAuth: jest.fn(),
 }))
 
 describe('Navbar Component', () => {
+  beforeEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useAuth } = require('@/context/AuthContext');
+    (useAuth as jest.Mock).mockReturnValue({ user: null, logout: jest.fn() });
+  });
+
   it('renders the branding text EnsureVault', () => {
     render(<Navbar />)
     expect(screen.getByText(/EnsureVault/i)).toBeInTheDocument()
