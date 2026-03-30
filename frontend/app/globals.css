@@ -3,68 +3,74 @@
 @plugin "tailwindcss-animate";
 
 :root {
-  --background: 220 33% 98%;
-  --foreground: 222.2 84% 4.9%;
+  /* ============================================================
+     EnsureVault — Banking-Grade Design System
+     Palette: Deep Navy + Champagne Gold + Clean White
+  ============================================================ */
+
+  --background: 216 33% 97%;
+  --foreground: 220 40% 12%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 220 40% 12%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
+  --popover-foreground: 220 40% 12%;
 
-  /* Vibrant primary: Indigo/Violet */
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 210 40% 98%;
+  /* Navy Blue — trust, authority */
+  --primary: 220 65% 22%;
+  --primary-foreground: 0 0% 100%;
 
-  /* Vibrant secondary: Pink/Rose */
-  --secondary: 338 71% 52%;
-  --secondary-foreground: 210 40% 98%;
+  /* Champagne Gold — premium, prestige */
+  --secondary: 40 60% 48%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 216 20% 93%;
+  --muted-foreground: 216 15% 52%;
 
-  --accent: 330 81% 60%;
-  --accent-foreground: 210 40% 98%;
+  /* Teal — action, progress */
+  --accent: 195 70% 38%;
+  --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 262.1 83.3% 57.8%;
+  --border: 216 20% 88%;
+  --input: 216 20% 88%;
+  --ring: 220 65% 22%;
 
-  --radius: 1rem;
+  --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 40% 7%;
+    --foreground: 216 30% 93%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 35% 11%;
+    --card-foreground: 216 30% 93%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 35% 11%;
+    --popover-foreground: 216 30% 93%;
 
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 214 60% 40%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 338 71% 52%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 40 55% 52%;
+    --secondary-foreground: 220 40% 8%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 30% 16%;
+    --muted-foreground: 216 18% 55%;
 
-    --accent: 330 81% 60%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 195 60% 45%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 65% 48%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 262.1 83.3% 57.8%;
+    --border: 220 28% 18%;
+    --input: 220 28% 18%;
+    --ring: 214 60% 40%;
   }
 }
 
@@ -96,32 +102,57 @@
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  @apply antialiased min-h-screen bg-linear-to-br from-background via-background to-primary/5;
+  font-family: var(--font-geist-sans, "Inter", Arial, Helvetica, sans-serif);
+  @apply antialiased min-h-screen;
+  background-image: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(216 30% 94%) 100%);
 }
 
-/* Glassmorphism Utilities */
+/* ---- Formal Card (solid, border, shadow — no glass) ---- */
 @utility glass {
-  @apply bg-white/30 backdrop-blur-lg border border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:bg-black/30 dark:border-white/10;
-}
-@utility glass-card {
-  @apply bg-white/40 backdrop-blur-xl border border-white/30 shadow-xl rounded-2xl dark:bg-black/40 dark:border-white/10;
+  @apply bg-white border border-border shadow-sm dark:bg-card dark:border-border;
 }
 
-/* Animations */
-@utility animate-fade-in {
-  animation: fadeIn 0.5s ease-out;
+@utility glass-card {
+  @apply bg-white border border-border shadow-md rounded-lg dark:bg-card dark:border-border;
 }
+
+/* ---- Banking Button ---- */
+@utility btn-primary {
+  @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+/* ---- Form Input ---- */
+@utility form-input {
+  @apply w-full border border-border bg-white dark:bg-muted/40 rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors duration-150;
+}
+
+/* ---- Animations (kept subtle for banking feel) ---- */
+@utility animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
 @utility animate-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

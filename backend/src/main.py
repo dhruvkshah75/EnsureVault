@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.database import init_pool, close_pool
-from src.routers import policy_types, policies, risk_assessment, premium, payouts
+from src.routers import policy_types, policies, risk_assessment, premium, payouts, auth
 
 
 @asynccontextmanager
@@ -28,7 +28,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,3 +45,4 @@ app.include_router(policies.router, prefix=settings.API_V1_PREFIX)
 app.include_router(risk_assessment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(premium.router, prefix=settings.API_V1_PREFIX)
 app.include_router(payouts.router, prefix=settings.API_V1_PREFIX)
+app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
