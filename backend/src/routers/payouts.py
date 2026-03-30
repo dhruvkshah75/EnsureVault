@@ -39,13 +39,13 @@ def approve_claim(
 ):
     """
     Approve a claim and insert a payout record atomically.
-    Uses START TRANSACTION / COMMIT / ROLLBACK to ensure both
+    Uses autocommit=False / commit / rollback to ensure both
     the claim status update and payment insertion succeed together,
     or neither is saved. (Claims Manager / Admin)
     """
     cursor = db.cursor(dictionary=True)
 
-    # --- Pre-flight checks (outside transaction) ---
+    # --- Pre-flight checks ---
 
     # 1. Verify claim exists and is in a reviewable state
     cursor.execute(
@@ -56,7 +56,7 @@ def approve_claim(
         (claim_id,),
     )
     claim: Any = cursor.fetchone()
-    
+
     if claim is None:
         cursor.close()
         raise HTTPException(status_code=404, detail=f"Claim {claim_id} not found")
@@ -76,17 +76,19 @@ def approve_claim(
         (claim["policy_id"],),
     )
     coverage: Any = cursor.fetchone()
-    
+
     if not coverage or body.payout_amount > coverage["max_coverage"]:
         cursor.close()
         raise HTTPException(
             status_code=400,
-            detail=f"Payout amount exceeds max coverage of {coverage['max_coverage']}",
+            detail=f"Payout amount exceeds max coverage of {coverage['max_coverage'] if coverage else 'N/A'}",
         )
 
     # --- ATOMIC TRANSACTION ---
+    # Note: db.start_transaction() is NOT available on PooledMySQLConnection.
+    # We use autocommit=False instead, which is equivalent.
     try:
-        db.start_transaction()
+        db.autocommit = False
 
         # Step 1: Update claim status to Approved
         cursor.execute(
@@ -113,6 +115,8 @@ def approve_claim(
             status_code=500,
             detail=f"Transaction failed and was rolled back: {str(e)}",
         )
+    finally:
+        db.autocommit = True
 
     cursor.close()
 
@@ -160,7 +164,7 @@ def pay_premium(
 
     # --- ATOMIC TRANSACTION ---
     try:
-        db.start_transaction()
+        db.autocommit = False
 
         # Insert premium payment record
         cursor.execute(
@@ -181,6 +185,8 @@ def pay_premium(
             status_code=500,
             detail=f"Transaction failed and was rolled back: {str(e)}",
         )
+    finally:
+        db.autocommit = True
 
     cursor.close()
 
