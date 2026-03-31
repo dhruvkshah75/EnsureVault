@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Activity, ShieldCheck, Zap, Loader2, AlertCircle } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -23,6 +24,7 @@ interface PremiumResult {
 const DEMO_CUSTOMER_ID = 1;
 
 export default function PremiumCalculator() {
+  const { toast } = useToast();
   const [policyTypes, setPolicyTypes] = useState<PolicyType[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
   const [result, setResult] = useState<PremiumResult | null>(null);
@@ -37,9 +39,12 @@ export default function PremiumCalculator() {
         setPolicyTypes(json.data ?? []);
         if (json.data?.length > 0) setSelectedType(String(json.data[0].type_id));
       })
-      .catch(() => setError("Could not load policy types."))
+      .catch(() => {
+        setError("Could not load policy types.");
+        toast("Could not load policy types from the server.", "error");
+      })
       .finally(() => setLoadingTypes(false));
-  }, []);
+  }, [toast]);
 
   const calculatePremium = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +64,13 @@ export default function PremiumCalculator() {
 
       const json = await res.json();
       if (!res.ok) throw new Error(json.detail ?? "Calculation failed.");
+
       setResult(json.data);
+      toast("Premium calculated successfully!", "success");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "An error occurred.");
+      const message = e instanceof Error ? e.message : "An error occurred.";
+      setError(message);
+      toast(message, "error");
     } finally {
       setIsCalculating(false);
     }
@@ -80,13 +89,14 @@ export default function PremiumCalculator() {
         <div className="glass-card p-8">
           <form className="space-y-6" onSubmit={calculatePremium}>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Insurance Type</label>
+              <label htmlFor="insurance_type" className="text-sm font-medium">Insurance Type</label>
               {loadingTypes ? (
                 <div className="flex items-center gap-2 text-muted-foreground text-sm p-3">
                   <Loader2 className="w-4 h-4 animate-spin" /> Loading types...
                 </div>
               ) : (
                 <select
+                  id="insurance_type"
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg p-3 outline-none focus:ring-2 focus:ring-accent transition-all"
