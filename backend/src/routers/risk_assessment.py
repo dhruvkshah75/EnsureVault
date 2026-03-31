@@ -1,33 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
 from mysql.connector import MySQLConnection
 from typing import Optional
-from datetime import date
 from src.database import get_db
 from src.models.claim import (
+    ClaimCreate,
     ClaimDecisionRequest,
     ClaimResponse,
     ClaimAssessmentResponse,
     DocumentResponse,
     ClaimStatus,
 )
-from src.models.common import APIResponse
+from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/claims", tags=["Risk Assessment"])
 
 
-class ClaimCreate(BaseModel):
-    policy_id: int = Field(..., gt=0)
-    incident_date: date
-    claim_amount: float = Field(..., gt=0)
-
-
-@router.get("/", response_model=APIResponse)
+@router.get(
+    "/",
+    response_model=APIResponse,
+    summary="List all claims",
+    description=(
+        "Retrieve all insurance claims with optional filtering by customer. "
+        "Includes joined customer name and policy type for each claim. "
+        "Ordered by most recent first."
+    ),
+    responses={
+        200: {"description": "List of claims", "model": APIResponse},
+    },
+)
 def list_claims(
-    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    customer_id: Optional[int] = Query(None, gt=0, description="Filter by customer ID"),
     db: MySQLConnection = Depends(get_db),
 ):
-    """List all claims, optionally filtered by customer. (Customer, Agent, Admin)"""
     query = """
         SELECT
             cl.claim_id, cl.policy_id, c.full_name AS customer_name,
@@ -49,12 +53,33 @@ def list_claims(
     cursor.execute(query, params)
     rows = cursor.fetchall()
     cursor.close()
-    return APIResponse(success=True, message=f"Found {len(rows)} claims", data=rows)
+    return APIResponse(
+        success=True,
+        message=f"Found {len(rows)} claims",
+        data=[ClaimResponse(**row) for row in rows],
+    )
 
 
-@router.post("/", response_model=APIResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=APIResponse,
+    status_code=201,
+    summary="Submit a new insurance claim",
+    description=(
+        "File a new claim against an active policy. "
+        "The claim starts in `Pending` status.\n\n"
+        "**Constraints:**\n"
+        "- `policy_id` — must reference an existing, **Active** policy.\n"
+        "- `incident_date` — date the incident occurred (YYYY-MM-DD).\n"
+        "- `claim_amount` — must be > 0 and ≤ 100,000,000."
+    ),
+    responses={
+        201: {"description": "Claim submitted successfully", "model": APIResponse},
+        400: {"description": "Policy is not active or validation error", "model": ErrorResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+    },
+)
 def create_claim(body: ClaimCreate, db: MySQLConnection = Depends(get_db)):
-    """Submit a new insurance claim for a given policy. (Customer)"""
     cursor = db.cursor(dictionary=True)
 
     cursor.execute("SELECT policy_id, status FROM policy WHERE policy_id = %s", (body.policy_id,))
@@ -82,9 +107,20 @@ def create_claim(body: ClaimCreate, db: MySQLConnection = Depends(get_db)):
     return APIResponse(success=True, message="Claim submitted successfully", data={"claim_id": new_id})
 
 
-@router.get("/pending", response_model=APIResponse)
+@router.get(
+    "/pending",
+    response_model=APIResponse,
+    summary="List pending / under-review claims",
+    description=(
+        "Return all claims that are still awaiting adjuster review "
+        "(status = Pending or Under Review). Ordered by incident date "
+        "ascending so oldest claims appear first."
+    ),
+    responses={
+        200: {"description": "Pending claims list", "model": APIResponse},
+    },
+)
 def list_pending_claims(db: MySQLConnection = Depends(get_db)):
-    """List all claims awaiting adjuster review. (Claims Manager)"""
     cursor = db.cursor(dictionary=True)
     cursor.execute(
         """
@@ -110,12 +146,23 @@ def list_pending_claims(db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.get("/{claim_id}/assess", response_model=APIResponse)
+@router.get(
+    "/{claim_id}/assess",
+    response_model=APIResponse,
+    summary="Run automated risk assessment on a claim",
+    description=(
+        "Call the `assess_claim_risk` stored procedure to compute a risk "
+        "score for the given claim. The response includes the coverage "
+        "ratio, historical claim count, days since policy start, computed "
+        "risk level (LOW / MEDIUM / HIGH), and a recommended action."
+    ),
+    responses={
+        200: {"description": "Risk assessment completed", "model": APIResponse},
+        404: {"description": "Claim not found", "model": ErrorResponse},
+        500: {"description": "Stored procedure execution failed", "model": ErrorResponse},
+    },
+)
 def assess_claim_risk(claim_id: int, db: MySQLConnection = Depends(get_db)):
-    """
-    Get an automated risk assessment for a claim by calling the
-    assess_claim_risk stored procedure. (Claims Manager)
-    """
     cursor = db.cursor(dictionary=True)
 
     # Verify claim exists
@@ -146,9 +193,20 @@ def assess_claim_risk(claim_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.get("/{claim_id}/documents", response_model=APIResponse)
+@router.get(
+    "/{claim_id}/documents",
+    response_model=APIResponse,
+    summary="Get documents for a claim",
+    description=(
+        "Retrieve all supporting documents uploaded for a specific claim. "
+        "Each document includes its type and file URL."
+    ),
+    responses={
+        200: {"description": "Documents retrieved", "model": APIResponse},
+        404: {"description": "Claim not found", "model": ErrorResponse},
+    },
+)
 def get_claim_documents(claim_id: int, db: MySQLConnection = Depends(get_db)):
-    """Retrieve all documents uploaded for a claim. (Claims Manager)"""
     cursor = db.cursor(dictionary=True)
 
     cursor.execute("SELECT claim_id FROM claim WHERE claim_id = %s", (claim_id,))
@@ -170,15 +228,29 @@ def get_claim_documents(claim_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.put("/{claim_id}/decision", response_model=APIResponse)
+@router.put(
+    "/{claim_id}/decision",
+    response_model=APIResponse,
+    summary="Approve or reject a claim",
+    description=(
+        "Record a decision on a claim. Only claims in `Pending` or "
+        "`Under Review` status can be decided.\n\n"
+        "**Rules:**\n"
+        "- `status` must be `Approved` or `Rejected`.\n"
+        "- `rejection_reason` is **required** when rejecting (1–500 chars).\n"
+        "- Already-decided claims cannot be reviewed again."
+    ),
+    responses={
+        200: {"description": "Decision recorded", "model": APIResponse},
+        400: {"description": "Invalid decision or claim not in reviewable state", "model": ErrorResponse},
+        404: {"description": "Claim not found", "model": ErrorResponse},
+    },
+)
 def decide_claim(
     claim_id: int,
     body: ClaimDecisionRequest,
     db: MySQLConnection = Depends(get_db),
 ):
-    """
-    Approve or reject a claim. Rejection requires a reason. (Claims Manager)
-    """
     # Validate decision
     if body.status not in (ClaimStatus.APPROVED, ClaimStatus.REJECTED):
         raise HTTPException(

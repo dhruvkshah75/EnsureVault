@@ -9,21 +9,38 @@ from src.models.policy import (
     PolicyDetailResponse,
     NomineeResponse,
 )
-from src.models.common import APIResponse
+from src.models.common import APIResponse, ErrorResponse
 from src.utils.validators import validate_date_range
 
 router = APIRouter(prefix="/policies", tags=["Policies"])
 
 
-@router.get("/", response_model=APIResponse)
+@router.get(
+    "/",
+    response_model=APIResponse,
+    summary="List all policies",
+    description=(
+        "Retrieve a paginated list of insurance policies with optional filters. "
+        "Agents see their own book of business; admins see everything. "
+        "Returned policies include joined customer, type, and agent names."
+    ),
+    responses={
+        200: {
+            "description": "List of policies matching the applied filters",
+            "model": APIResponse,
+        },
+    },
+)
 def list_policies(
-    customer_id: Optional[int] = Query(None, description="Filter by customer"),
-    agent_id: Optional[int] = Query(None, description="Filter by agent"),
-    status: Optional[str] = Query(None, description="Filter by status"),
-    type_id: Optional[int] = Query(None, description="Filter by policy type"),
+    customer_id: Optional[int] = Query(None, gt=0, description="Filter by customer ID"),
+    agent_id: Optional[int] = Query(None, gt=0, description="Filter by agent ID"),
+    status: Optional[str] = Query(
+        None,
+        description="Filter by lifecycle status (Active, Expired, Cancelled, Pending)",
+    ),
+    type_id: Optional[int] = Query(None, gt=0, description="Filter by policy type ID"),
     db: MySQLConnection = Depends(get_db),
 ):
-    """List policies with optional filters. (Agent, Admin)"""
     query = """
         SELECT
             p.policy_id, p.customer_id, c.full_name AS customer_name,
@@ -64,9 +81,21 @@ def list_policies(
     )
 
 
-@router.get("/{policy_id}", response_model=APIResponse)
+@router.get(
+    "/{policy_id}",
+    response_model=APIResponse,
+    summary="Get policy details with nominees",
+    description=(
+        "Retrieve a single policy by its ID together with all linked nominees. "
+        "Returns a `PolicyDetailResponse` containing the policy record and a "
+        "list of nominee entries."
+    ),
+    responses={
+        200: {"description": "Policy found", "model": APIResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+    },
+)
 def get_policy(policy_id: int, db: MySQLConnection = Depends(get_db)):
-    """Get a policy with its nominees."""
     cursor = db.cursor(dictionary=True)
 
     cursor.execute(
@@ -106,12 +135,29 @@ def get_policy(policy_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.post("/", response_model=APIResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=APIResponse,
+    status_code=201,
+    summary="Create a new insurance policy",
+    description=(
+        "Create a new insurance policy for a customer. "
+        "If `premium_amount` is omitted, the server calls the "
+        "`calculate_premium` stored procedure to derive the premium "
+        "based on the customer's risk profile and policy type. "
+        "All foreign-key references (customer, type, agent) are validated "
+        "before insertion."
+    ),
+    responses={
+        201: {"description": "Policy created successfully", "model": APIResponse},
+        400: {"description": "Validation error or DB constraint violation", "model": ErrorResponse},
+        404: {"description": "Referenced customer, type, or agent not found", "model": ErrorResponse},
+    },
+)
 def create_policy(
     body: PolicyCreate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Create a new policy. Premium is auto-calculated if not provided. (Agent)"""
     validate_date_range(body.start_date, body.end_date)
 
     cursor = db.cursor(dictionary=True)
@@ -166,13 +212,26 @@ def create_policy(
     )
 
 
-@router.put("/{policy_id}/status", response_model=APIResponse)
+@router.put(
+    "/{policy_id}/status",
+    response_model=APIResponse,
+    summary="Update policy lifecycle status",
+    description=(
+        "Change the lifecycle status of an existing policy. "
+        "Valid transitions: Active → Cancelled, Active → Expired, etc. "
+        "Admin-only operation."
+    ),
+    responses={
+        200: {"description": "Status updated successfully", "model": APIResponse},
+        400: {"description": "Invalid status value", "model": ErrorResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+    },
+)
 def update_policy_status(
     policy_id: int,
     body: PolicyStatusUpdate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Change the status of a policy (activate, cancel, expire). (Admin)"""
     cursor = db.cursor()
     try:
         cursor.execute(

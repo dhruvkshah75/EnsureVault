@@ -1,48 +1,45 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
-from pydantic import BaseModel, Field
-from enum import Enum
 from typing import Any
 from src.database import get_db
-from src.models.common import APIResponse
+from src.models.payout import (
+    ApproveClaimRequest,
+    PremiumPaymentRequest,
+    ApproveClaimResponse,
+    PremiumPaymentResponse,
+    PaymentRecord,
+)
+from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/payouts", tags=["Payouts & Finance"])
 
 
-class PaymentMode(str, Enum):
-    CREDIT_CARD = "Credit Card"
-    DEBIT_CARD = "Debit Card"
-    UPI = "UPI"
-    NET_BANKING = "Net Banking"
-    CASH = "Cash"
-
-
-class ApproveclaimRequest(BaseModel):
-    payout_amount: float = Field(..., gt=0, description="Amount to pay out to the customer")
-    payment_mode: PaymentMode = Field(..., description="Mode of payment for the payout")
-
-
-class PremiumPaymentRequest(BaseModel):
-    payment_mode: PaymentMode = Field(..., description="Mode of payment for the premium")
-
-
-# ---------------------------------------------------------------
-# POST /api/v1/payouts/claims/{claim_id}/approve
-# Atomically approves a claim AND inserts a payment record.
-# Rolls back everything if any step fails.
-# ---------------------------------------------------------------
-@router.post("/claims/{claim_id}/approve", response_model=APIResponse)
+@router.post(
+    "/claims/{claim_id}/approve",
+    response_model=APIResponse,
+    summary="Approve a claim and issue payout",
+    description=(
+        "Atomically approve a claim and insert a payout payment record. "
+        "Uses a database transaction — both the claim status update and "
+        "payment insertion succeed together or neither is saved.\n\n"
+        "**Constraints:**\n"
+        "- Claim must be in `Pending` or `Under Review` status.\n"
+        "- `payout_amount` must be > 0 and ≤ the policy type's `max_coverage`.\n"
+        "- `payment_mode` must be one of: Credit Card, Debit Card, UPI, "
+        "Net Banking, Cash."
+    ),
+    responses={
+        200: {"description": "Claim approved and payout recorded", "model": APIResponse},
+        400: {"description": "Claim not in reviewable state or payout exceeds coverage", "model": ErrorResponse},
+        404: {"description": "Claim not found", "model": ErrorResponse},
+        500: {"description": "Transaction failed and was rolled back", "model": ErrorResponse},
+    },
+)
 def approve_claim(
     claim_id: int,
-    body: ApproveclaimRequest,
+    body: ApproveClaimRequest,
     db: MySQLConnection = Depends(get_db),
 ):
-    """
-    Approve a claim and insert a payout record atomically.
-    Uses autocommit=False / commit / rollback to ensure both
-    the claim status update and payment insertion succeed together,
-    or neither is saved. (Claims Manager / Admin)
-    """
     cursor = db.cursor(dictionary=True)
 
     # --- Pre-flight checks ---
@@ -85,8 +82,6 @@ def approve_claim(
         )
 
     # --- ATOMIC TRANSACTION ---
-    # Note: db.start_transaction() is NOT available on PooledMySQLConnection.
-    # We use autocommit=False instead, which is equivalent.
     try:
         db.autocommit = False
 
@@ -123,25 +118,39 @@ def approve_claim(
     return APIResponse(
         success=True,
         message=f"Claim {claim_id} approved and payout of {body.payout_amount} processed",
-        data={"claim_id": claim_id, "txn_id": new_txn_id, "payout_amount": body.payout_amount},
+        data=ApproveClaimResponse(
+            claim_id=claim_id,
+            txn_id=new_txn_id,
+            payout_amount=body.payout_amount,
+        ),
     )
 
 
-# ---------------------------------------------------------------
-# POST /api/v1/payouts/policies/{policy_id}/pay-premium
-# Records a premium payment for a policy atomically.
-# ---------------------------------------------------------------
-@router.post("/policies/{policy_id}/pay-premium", response_model=APIResponse)
+@router.post(
+    "/policies/{policy_id}/pay-premium",
+    response_model=APIResponse,
+    summary="Record a premium payment",
+    description=(
+        "Record a premium payment for an active policy. "
+        "The payment amount is derived from the policy's `premium_amount` field. "
+        "Only active policies can receive premium payments.\n\n"
+        "**Constraints:**\n"
+        "- Policy must exist and be in `Active` status.\n"
+        "- `payment_mode` must be one of: Credit Card, Debit Card, UPI, "
+        "Net Banking, Cash."
+    ),
+    responses={
+        200: {"description": "Premium payment recorded", "model": APIResponse},
+        400: {"description": "Policy not active", "model": ErrorResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+        500: {"description": "Transaction failed", "model": ErrorResponse},
+    },
+)
 def pay_premium(
     policy_id: int,
     body: PremiumPaymentRequest,
     db: MySQLConnection = Depends(get_db),
 ):
-    """
-    Record a premium payment for an active policy atomically.
-    Inserts a payment record and updates policy status if needed.
-    Rolls back everything if any step fails. (Customer / Agent)
-    """
     cursor = db.cursor(dictionary=True)
 
     # Verify policy exists and is active
@@ -193,19 +202,28 @@ def pay_premium(
     return APIResponse(
         success=True,
         message=f"Premium payment of {policy['premium_amount']} recorded for policy {policy_id}",
-        data={"policy_id": policy_id, "txn_id": new_txn_id, "amount": policy["premium_amount"]},
+        data=PremiumPaymentResponse(
+            policy_id=policy_id,
+            txn_id=new_txn_id,
+            amount=policy["premium_amount"],
+        ),
     )
 
 
-# ---------------------------------------------------------------
-# GET /api/v1/payouts/policies/{policy_id}/payments
-# List all payment records for a policy.
-# ---------------------------------------------------------------
-@router.get("/policies/{policy_id}/payments", response_model=APIResponse)
+@router.get(
+    "/policies/{policy_id}/payments",
+    response_model=APIResponse,
+    summary="List payment history for a policy",
+    description=(
+        "Retrieve all payment transactions (premiums and claim payouts) "
+        "for a specific policy, ordered by most recent first."
+    ),
+    responses={
+        200: {"description": "Payment records retrieved", "model": APIResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+    },
+)
 def get_policy_payments(policy_id: int, db: MySQLConnection = Depends(get_db)):
-    """
-    Retrieve all payment transactions for a specific policy. (Agent, Admin)
-    """
     cursor = db.cursor(dictionary=True)
 
     cursor.execute("SELECT policy_id FROM policy WHERE policy_id = %s", (policy_id,))
@@ -223,5 +241,5 @@ def get_policy_payments(policy_id: int, db: MySQLConnection = Depends(get_db)):
     return APIResponse(
         success=True,
         message=f"Found {len(rows)} payment records",
-        data=rows,
+        data=[PaymentRecord(**row) for row in rows],
     )

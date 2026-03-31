@@ -37,6 +37,9 @@ export default function Navbar() {
                 <Link href="/customer/claims/new" className="flex items-center gap-2 text-foreground/80 hover:text-primary transition-colors">
                   <PlusCircle className="h-4 w-4" /> New Claim
                 </Link>
+                <Link href="/customer/profile" className="flex items-center gap-2 text-foreground/80 hover:text-primary transition-colors">
+                  <User className="h-4 w-4" /> Profile
+                </Link>
                 <Link href="/premium-calculator" className="flex items-center gap-2 text-foreground/80 hover:text-primary transition-colors">
                   <Calculator className="h-4 w-4" /> Calculator
                 </Link>
@@ -78,8 +81,8 @@ export default function Navbar() {
                 <div className="hidden md:flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground">{user.name}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${user.role === "admin" ? "bg-secondary/10 text-secondary border-secondary/30" :
-                      user.role === "agent" ? "bg-accent/10 text-accent border-accent/30" :
-                        "bg-primary/10 text-primary border-primary/30"
+                    user.role === "agent" ? "bg-accent/10 text-accent border-accent/30" :
+                      "bg-primary/10 text-primary border-primary/30"
                     }`}>
                     {user.role}
                   </span>
@@ -92,12 +95,20 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <Link
-                href="/auth/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                <LogIn className="h-4 w-4" /> Sign in
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/auth/register"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
+                >
+                  Sign Up
+                </Link>
+                <Link
+                  href="/auth/login"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                >
+                  <LogIn className="h-4 w-4" /> Sign In
+                </Link>
+              </div>
             )}
           </div>
         </div>
