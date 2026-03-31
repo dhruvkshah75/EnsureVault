@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FileText, Clock, AlertCircle, Loader2 } from "lucide-react";
@@ -33,22 +34,22 @@ const statusColor: Record<string, string> = {
   Rejected: "bg-red-500/10 text-red-500 border-red-500/20",
 };
 
-// Demo: using customer_id=1 (Amit Patel from seed data)
-const DEMO_CUSTOMER_ID = 1;
-
 export default function CustomerDashboard() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const customerId = user?.customer_id ?? 1;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [pRes, cRes] = await Promise.all([
-          fetch(`${API}/policies/?customer_id=${DEMO_CUSTOMER_ID}`),
-          fetch(`${API}/claims/?customer_id=${DEMO_CUSTOMER_ID}`),
+          fetch(`${API}/policies/?customer_id=${customerId}`),
+          fetch(`${API}/claims/?customer_id=${customerId}`),
         ]);
 
         if (!pRes.ok || !cRes.ok) throw new Error("Failed to load data from server.");

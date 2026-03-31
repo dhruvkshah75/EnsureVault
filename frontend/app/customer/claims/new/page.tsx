@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,13 +10,9 @@ import { useToast } from "@/components/Toast";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-// Demo: using customer_id=1 (Amit Patel from seed data)
-const DEMO_CUSTOMER_ID = 1;
-
 interface Policy {
   policy_id: number;
   type_name: string;
-  status: string;
 }
 
 interface SubmittedClaim {
@@ -23,11 +20,14 @@ interface SubmittedClaim {
 }
 
 export default function NewClaim() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loadingPolicies, setLoadingPolicies] = useState(true);
   const [submitted, setSubmitted] = useState<SubmittedClaim | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const customerId = user?.customer_id ?? 1;
 
   const {
     register,
@@ -44,7 +44,7 @@ export default function NewClaim() {
   });
 
   useEffect(() => {
-    fetch(`${API}/policies/?customer_id=${DEMO_CUSTOMER_ID}&status=Active`)
+    fetch(`${API}/policies/?customer_id=${customerId}&status=Active`)
       .then((r) => r.json())
       .then((json) => {
         const data = json.data ?? [];

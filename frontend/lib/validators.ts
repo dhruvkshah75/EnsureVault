@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 // ─── Claims Form ────────────────────────────────────────────────────────────
 export const claimFormSchema = z.object({
@@ -9,7 +9,7 @@ export const claimFormSchema = z.object({
     .string()
     .min(1, "Incident date is required")
     .refine(
-      (val) => {
+      (val: string) => {
         const d = new Date(val);
         return !isNaN(d.getTime()) && d <= new Date();
       },
@@ -18,7 +18,7 @@ export const claimFormSchema = z.object({
   claim_amount: z
     .string()
     .min(1, "Claim amount is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    .refine((val: string) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Claim amount must be a positive number",
     }),
 });
@@ -33,13 +33,13 @@ export const policyTypeFormSchema = z.object({
   base_premium: z
     .string()
     .min(1, "Base premium is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    .refine((val: string) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Base premium must be a positive number",
     }),
   max_coverage: z
     .string()
     .min(1, "Maximum coverage is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    .refine((val: string) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
       message: "Maximum coverage must be a positive number",
     }),
 });

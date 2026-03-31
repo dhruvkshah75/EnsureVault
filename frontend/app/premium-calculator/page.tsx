@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import { Activity, ShieldCheck, Zap, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/Toast";
@@ -20,10 +21,8 @@ interface PremiumResult {
   calculated_premium: number;
 }
 
-// Demo: using customer_id=1 (Amit Patel from seed data — Verified KYC)
-const DEMO_CUSTOMER_ID = 1;
-
 export default function PremiumCalculator() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [policyTypes, setPolicyTypes] = useState<PolicyType[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -31,6 +30,8 @@ export default function PremiumCalculator() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const customerId = user?.customer_id ?? 1;
 
   useEffect(() => {
     fetch(`${API}/policy-types/`)
@@ -57,7 +58,7 @@ export default function PremiumCalculator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer_id: DEMO_CUSTOMER_ID,
+          customer_id: customerId,
           type_id: parseInt(selectedType),
         }),
       });
