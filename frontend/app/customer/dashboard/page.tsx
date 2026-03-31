@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FileText, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -36,6 +37,7 @@ const statusColor: Record<string, string> = {
 const DEMO_CUSTOMER_ID = 1;
 
 export default function CustomerDashboard() {
+  const { toast } = useToast();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,14 +59,16 @@ export default function CustomerDashboard() {
         setPolicies(pJson.data ?? []);
         setClaims(cJson.data ?? []);
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Unknown error");
+        const message = e instanceof Error ? e.message : "Unknown error";
+        setError(message);
+        toast("Could not load your portfolio. Please check that the server is running.", "error");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [toast]);
 
   if (loading) {
     return (
