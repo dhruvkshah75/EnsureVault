@@ -12,6 +12,7 @@ USE ensurevault;
 CREATE TABLE IF NOT EXISTS agent (
     agent_id      INT           AUTO_INCREMENT PRIMARY KEY,
     name          VARCHAR(100)  NOT NULL,
+    email         VARCHAR(150)  NOT NULL UNIQUE,
     commission_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     region        VARCHAR(100)  NOT NULL
 );

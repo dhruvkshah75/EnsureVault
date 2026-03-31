@@ -8,9 +8,9 @@ USE ensurevault;
 -- --------------------------------------------------------
 -- Agents
 -- --------------------------------------------------------
-INSERT INTO agent (name, commission_rate, region) VALUES
-('Rajesh Sharma',  8.50, 'Maharashtra'),
-('Priya Menon',    7.25, 'Karnataka');
+INSERT INTO agent (name, email, commission_rate, region) VALUES
+('Rajesh Sharma', 'rajesh.sharma@ensurevault.com', 8.50, 'Maharashtra'),
+('Priya Menon',   'priya.menon@ensurevault.com',   7.25, 'Karnataka');
 
 -- --------------------------------------------------------
 -- Policy Types (Health, Car, Home)
