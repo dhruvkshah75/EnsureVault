@@ -47,24 +47,20 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
         )
 
     # 2. Check if email belongs to an agent
-    # Agents don't have emails in the schema; match by name@ensurevault.com convention
-    # We derive email as: lowercase(name).replace(" ", ".") + "@ensurevault.com"
-    cursor.execute("SELECT agent_id AS user_id, name FROM agent", [])
-    agents = cursor.fetchall()
+    cursor.execute("SELECT agent_id AS user_id, name FROM agent WHERE email = %s", (body.email,),)
+    agent = cursor.fetchone()
     cursor.close()
 
-    for agent in agents:
-        derived_email = agent["name"].lower().replace(" ", ".") + "@ensurevault.com"
-        if body.email.lower() == derived_email:
-            return APIResponse(
-                success=True,
-                message="Login successful",
-                data=LoginResponse(
-                    name=agent["name"],
-                    role="agent",
-                    user_id=agent["user_id"],
-                ),
-            )
+    if agent:
+        return APIResponse(
+            success=True,
+            message="Login successful",
+            data=LoginResponse(
+                name=agent["name"],
+                role="agent",
+                user_id=agent["user_id"],
+            ),
+        )
 
     # 3. Check for admin (hardcoded for demo)
     if body.email.lower() == "admin@ensurevault.com":
