@@ -1,30 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
 from mysql.connector import MySQLConnection
 from src.database import get_db
-from src.models.common import APIResponse
+from src.models.auth import LoginRequest, LoginResponse
+from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-class LoginRequest(BaseModel):
-    email: str
-
-
-class LoginResponse(BaseModel):
-    name: str
-    role: str          # "customer" | "agent" | "admin"
-    user_id: int
-    customer_id: int | None = None
-
-
-@router.post("/login", response_model=APIResponse)
+@router.post(
+    "/login",
+    response_model=APIResponse,
+    summary="Authenticate user by email",
+    description=(
+        "Resolve a user's identity and role from their email address. "
+        "The lookup order is:\n"
+        "1. **Customer table** — match by `email` column.\n"
+        "2. **Agent table** — match by derived email "
+        "(`lowercase(name).replace(' ', '.') + '@ensurevault.com'`).\n"
+        "3. **Admin** — hardcoded demo account `admin@ensurevault.com`.\n\n"
+        "Returns the user's name, role, and ID so the frontend can gate "
+        "access accordingly."
+    ),
+    responses={
+        200: {"description": "Login successful", "model": APIResponse},
+        401: {"description": "No account found for this email", "model": ErrorResponse},
+    },
+)
 def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
-    """
-    Resolve a user's role from their email address.
-    Checks the customer table first, then the agent table.
-    Returns user info and role so the frontend can gate access accordingly.
-    """
     cursor = db.cursor(dictionary=True)
 
     # 1. Check if email belongs to a customer
@@ -47,8 +49,6 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
         )
 
     # 2. Check if email belongs to an agent
-    # Agents don't have emails in the schema; match by name@ensurevault.com convention
-    # We derive email as: lowercase(name).replace(" ", ".") + "@ensurevault.com"
     cursor.execute("SELECT agent_id AS user_id, name FROM agent", [])
     agents = cursor.fetchall()
     cursor.close()

@@ -90,3 +90,42 @@ The system is divided into functional modules designed to handle high-concurrenc
 * **Triggers:** Enforces business constraints, such as preventing duplicate claims.
 * **Stored Procedures:** Offloads complex financial calculations from the backend to the database.
 * **Transactions:** Ensures Atomicity and Consistency during claim settlement and payment processing.
+
+---
+
+## Backend Validation & API Documentation
+
+All API endpoints are hardened with **strict Pydantic validation** and **comprehensive Swagger/OpenAPI documentation**.
+
+### Pydantic Models (`backend/src/models/`)
+
+Every request and response body is defined as a Pydantic `BaseModel` with explicit field constraints:
+
+| Model | File | Key Constraints |
+|---|---|---|
+| `PolicyTypeCreate` | `policy_type.py` | `base_premium > 0`, `max_coverage > 0`, `type_name` enum (Health/Car/Home) |
+| `PolicyCreate` | `policy.py` | `customer_id > 0`, `type_id > 0`, `agent_id > 0`, `end_date > start_date` (model validator) |
+| `ClaimCreate` | `claim.py` | `policy_id > 0`, `claim_amount > 0 & ≤ 100M` |
+| `ClaimDecisionRequest` | `claim.py` | `rejection_reason` required on reject (model validator), 1–500 chars |
+| `PremiumCalculateRequest` | `premium.py` | `customer_id > 0`, `type_id > 0` |
+| `ApproveClaimRequest` | `payout.py` | `payout_amount > 0 & ≤ 100M`, `payment_mode` enum |
+| `LoginRequest` | `auth.py` | `email` min 5 / max 255 chars |
+
+### Swagger Documentation
+
+Every route decorator includes:
+- **`response_model`** — typed response envelope (`APIResponse`)
+- **`summary`** — short one-line description for the Swagger UI sidebar
+- **`description`** — detailed markdown documentation with constraints and rules
+- **`responses`** — documented error shapes (400, 404, 500) using `ErrorResponse` model
+
+### Centralized Error Responses
+
+All 4XX/5XX errors return a consistent `ErrorResponse` shape:
+```json
+{
+  "success": false,
+  "message": "Short error summary",
+  "detail": "Extended diagnostic info (may be null)"
+}
+```
