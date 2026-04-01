@@ -10,25 +10,39 @@
 
 ## Application Preview
 
-### Customer & Agent Dashboards
+### Customer Dashboard
 <p align="center">
-  <img src="./assets/customerDash.png" alt="Customer Dashboard" width="49%" style="display:inline-block; margin-right: 1%"/>
-  <img src="./assets/agentDash.png" alt="Agent Dashboard" width="49%" style="display:inline-block"/>
+  <img src="./assets/customerDash.png" alt="Customer Dashboard" width="800"/>
 </p>
 
-**Customer Dashboard** (Left): View active policies, submit claims, manage beneficiaries, and make premium payments.  
-**Agent Dashboard** (Right): Manage client portfolios, issue new policies, and track performance metrics.
+View active policies, submit claims, manage beneficiaries, and make premium payments—all in one place.
 
 ---
 
-### Claims Manager & Admin Dashboards
+### Agent Dashboard
 <p align="center">
-  <img src="./assets/claimsManagerDash.png" alt="Claims Manager Dashboard" width="49%" style="display:inline-block; margin-right: 1%"/>
-  <img src="./assets/adminDash.png" alt="Admin Dashboard" width="49%" style="display:inline-block"/>
+  <img src="./assets/agentDash.png" alt="Agent Dashboard" width="800"/>
 </p>
 
-**Claims Manager Dashboard** (Left): Review pending claims, verify evidence, and make adjudication decisions.  
-**Admin Dashboard** (Right): Manage system configuration, create policy types, and oversee agent operations.
+Manage client portfolios, issue new policies, and track performance metrics.
+
+---
+
+### Claims Manager Dashboard
+<p align="center">
+  <img src="./assets/claimsManagerDash.png" alt="Claims Manager Dashboard" width="800"/>
+</p>
+
+Review pending claims, verify evidence, and make adjudication decisions with comprehensive filtering options.
+
+---
+
+### Admin Dashboard
+<p align="center">
+  <img src="./assets/adminDash.png" alt="Admin Dashboard" width="800"/>
+</p>
+
+Manage system configuration, create policy types, and oversee agent operations.
 
 ---
 
@@ -102,5 +116,5 @@ The system uses sophisticated algorithms to calculate premiums based on:
 
 ---
 
----
+
 

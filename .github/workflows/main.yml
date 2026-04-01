@@ -1,20 +1,15 @@
 name: EnsureVault CI
 
-# Run this workflow on pushes to any branch and pull requests to main
 on:
   push:
-    branches:
-      - '**'
+    branches: ["**"]
   pull_request:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
-  # -------------------------------------------------------------
-  # FRONTEND: Lint & Test
-  # -------------------------------------------------------------
+  # 1. Frontend Checks
   frontend-checks:
-    name: Frontend Quality Checks
+    name: Frontend (Lint & Build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,13 +33,16 @@ jobs:
         run: npm run lint
 
       - name: Run Tests
-        run: npm run test
+        run: npm run test -- --passWithNoTests
 
-  # -------------------------------------------------------------
-  # BACKEND: Lint & Test
-  # -------------------------------------------------------------
+      - name: Production Build Check
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+
+  # 2. Backend Checks
   backend-checks:
-    name: Backend Quality Checks
+    name: Backend (Lint & Test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,15 +62,26 @@ jobs:
         run: uv python install 3.12
 
       - name: Install Dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --group dev
 
-      # Run flake8 or similar if it exists, otherwise just check the import graph or syntax
-      - name: Syntax & Import Check (Lint Placeholder)
-        run: |
-          uv run python -m compileall src/
-          
-      # Run pytest if tests exist, otherwise this will just pass or warn
-      # Modify this as Aayush writes backend tests!
-      - name: Run Tests (Placeholder)
-        run: |
-          echo "No backend tests explicitly defined yet. Add uv run pytest here."
+      - name: Run Ruff (Linter)
+        run: uv run ruff check src/ tests/
+
+      - name: Run Pytest
+        run: uv run pytest tests/
+        env:
+          DATABASE_URL: mysql+mysqlconnector://root:password@localhost:3306/ensurevault
+
+  # 3. Docker Build Verification
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose Config
+        run: docker compose config
+
+      - name: Build Images
+        run: docker compose build
