@@ -4,73 +4,76 @@
 
 :root {
   /* ============================================================
-     EnsureVault — Banking-Grade Design System
-     Palette: Deep Navy + Champagne Gold + Clean White
+     EnsureVault — Professional Banking Design System
+     Concept: Trust, Security, Clarity, Professionalism
   ============================================================ */
 
-  --background: 216 33% 97%;
-  --foreground: 220 40% 12%;
+  /* Clean White Background with Subtle Blue Tint */
+  --background: 210 20% 98%;
+  --foreground: 215 25% 15%;
 
+  /* Crisp White Cards */
   --card: 0 0% 100%;
-  --card-foreground: 220 40% 12%;
+  --card-foreground: 215 25% 15%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 220 40% 12%;
+  --popover-foreground: 215 25% 15%;
 
-  /* Navy Blue — trust, authority */
-  --primary: 220 65% 22%;
+  /* Royal Blue — Trust & Authority (Banking Standard) */
+  --primary: 217 91% 40%;
   --primary-foreground: 0 0% 100%;
 
-  /* Champagne Gold — premium, prestige */
-  --secondary: 40 60% 48%;
-  --secondary-foreground: 0 0% 100%;
+  /* Cool Gray Secondary */
+  --secondary: 214 15% 91%;
+  --secondary-foreground: 215 25% 25%;
 
-  --muted: 216 20% 93%;
-  --muted-foreground: 216 15% 52%;
+  --muted: 214 15% 95%;
+  --muted-foreground: 215 16% 50%;
 
-  /* Teal — action, progress */
-  --accent: 195 70% 38%;
+  /* Forest Green Accent — Security & Success */
+  --accent: 142 76% 36%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 72% 48%;
+  /* Subtle Warning Red */
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 216 20% 88%;
-  --input: 216 20% 88%;
-  --ring: 220 65% 22%;
+  /* Refined Borders */
+  --border: 214 20% 88%;
+  --input: 214 20% 92%;
+  --ring: 217 91% 40%;
 
   --radius: 0.5rem;
+  
+  /* Banking-Specific Colors */
+  --success: 142 76% 36%;
+  --warning: 38 92% 50%;
+  --info: 199 89% 48%;
 }
 
+/* Force light mode for banking professionalism */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 220 40% 7%;
-    --foreground: 216 30% 93%;
-
-    --card: 220 35% 11%;
-    --card-foreground: 216 30% 93%;
-
-    --popover: 220 35% 11%;
-    --popover-foreground: 216 30% 93%;
-
-    --primary: 214 60% 40%;
+    /* Maintain light theme even in dark mode preference */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+    --primary: 217 91% 40%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 40 55% 52%;
-    --secondary-foreground: 220 40% 8%;
-
-    --muted: 220 30% 16%;
-    --muted-foreground: 216 18% 55%;
-
-    --accent: 195 60% 45%;
+    --secondary: 214 15% 91%;
+    --secondary-foreground: 215 25% 25%;
+    --muted: 214 15% 95%;
+    --muted-foreground: 215 16% 50%;
+    --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 65% 48%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 220 28% 18%;
-    --input: 220 28% 18%;
-    --ring: 214 60% 40%;
+    --border: 214 20% 88%;
+    --input: 214 20% 92%;
+    --ring: 217 91% 40%;
   }
 }
 
@@ -102,57 +105,137 @@
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-geist-sans, "Inter", Arial, Helvetica, sans-serif);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   @apply antialiased min-h-screen;
-  background-image: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(216 30% 94%) 100%);
 }
 
-/* ---- Formal Card (solid, border, shadow — no glass) ---- */
+/* ---- Global Form Element Styling ---- */
+input, select, textarea {
+  color: var(--color-foreground) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-muted-foreground) !important;
+}
+
+/* ---- Subtle Professional Gradient ---- */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(ellipse at top right, hsl(217 91% 40% / 0.03), transparent 50%),
+    radial-gradient(ellipse at bottom left, hsl(142 76% 36% / 0.02), transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---- Professional Cards with Subtle Shadow ---- */
 @utility glass {
-  @apply bg-white border border-border shadow-sm dark:bg-card dark:border-border;
+  @apply bg-background/95 backdrop-blur-sm border border-border shadow-sm;
 }
 
 @utility glass-card {
-  @apply bg-white border border-border shadow-md rounded-lg dark:bg-card dark:border-border;
+  @apply bg-card backdrop-blur-sm border border-border shadow-md rounded-lg transition-all duration-200 hover:shadow-lg hover:border-primary/20;
 }
 
-/* ---- Banking Button ---- */
+/* ---- Professional Banking Buttons ---- */
 @utility btn-primary {
-  @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply bg-primary text-primary-foreground font-semibold px-6 py-2.5 rounded-md hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98];
 }
 
-/* ---- Form Input ---- */
+@utility btn-outline {
+  @apply border-2 border-primary/20 bg-transparent hover:bg-primary/5 hover:border-primary/40 text-foreground font-medium px-6 py-2.5 rounded-md transition-all duration-200;
+}
+
+@utility btn-success {
+  @apply bg-accent text-accent-foreground font-semibold px-6 py-2.5 rounded-md hover:bg-accent/90 focus:ring-2 focus:ring-accent/50 transition-all duration-200 shadow-sm;
+}
+
+/* ---- Professional Form Inputs ---- */
 @utility form-input {
-  @apply w-full border border-border bg-white dark:bg-muted/40 rounded-md px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors duration-150;
+  @apply w-full border border-input bg-card focus:bg-background rounded-md px-4 py-2.5 text-sm text-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200 outline-none placeholder:text-muted-foreground;
 }
 
-/* ---- Animations (kept subtle for banking feel) ---- */
-@utility animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+/* ---- Select Dropdowns ---- */
+select.form-input {
+  @apply cursor-pointer;
+  color: hsl(var(--foreground)) !important;
+}
+
+select.form-input option {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  padding: 8px;
+}
+
+/* Ensure all select elements have proper text color */
+select {
+  color: hsl(var(--foreground)) !important;
+}
+
+select option {
+  background-color: white !important;
+  color: hsl(215, 25%, 15%) !important;
+}
+
+/* ---- Status Badges ---- */
+@utility badge-success {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-accent/10 text-accent border border-accent/20;
+}
+
+@utility badge-warning {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200;
+}
+
+@utility badge-info {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200;
+}
+
+/* ---- Smooth Professional Animations ---- */
+@utility animate-premium-fade {
+  animation: premiumFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes premiumFade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @utility animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUp {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(20px);
   }
-
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }

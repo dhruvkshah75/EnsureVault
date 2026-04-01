@@ -157,60 +157,62 @@ export default function ClaimsManagerDashboard() {
             </div>
 
             {/* Filter Bar */}
-            <div className="glass-card p-4 flex flex-wrap items-end gap-6 bg-white/[0.02]">
-                <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Region</label>
-                    <select
-                        value={regionFilter}
-                        onChange={(e) => setRegionFilter(e.target.value)}
-                        className="form-input bg-background/50 text-sm h-10 w-40"
-                    >
-                        <option value="">All Regions</option>
-                        <option value="North">North</option>
-                        <option value="South">South</option>
-                        <option value="East">East</option>
-                        <option value="West">West</option>
-                        <option value="Central">Central</option>
-                    </select>
-                </div>
+            <div className="glass-card p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Region</label>
+                        <select
+                            value={regionFilter}
+                            onChange={(e) => setRegionFilter(e.target.value)}
+                            className="form-input text-sm h-10 w-full"
+                        >
+                            <option value="">All Regions</option>
+                            <option value="North">North</option>
+                            <option value="South">South</option>
+                            <option value="East">East</option>
+                            <option value="West">West</option>
+                            <option value="Central">Central</option>
+                        </select>
+                    </div>
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Policy Type</label>
-                    <select
-                        value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value)}
-                        className="form-input bg-background/50 text-sm h-10 w-40"
-                    >
-                        <option value="">All Types</option>
-                        <option value="Health">Health</option>
-                        <option value="Car">Car</option>
-                        <option value="Home">Home</option>
-                    </select>
-                </div>
+                    <div className="space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Policy Type</label>
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            className="form-input text-sm h-10 w-full"
+                        >
+                            <option value="">All Types</option>
+                            <option value="Health">Health</option>
+                            <option value="Car">Car</option>
+                            <option value="Home">Home</option>
+                        </select>
+                    </div>
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Incident Date From</label>
-                    <input
-                        type="date"
-                        value={dateRange.start}
-                        onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                        className="form-input bg-background/50 text-sm h-10"
-                    />
-                </div>
+                    <div className="space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Incident Date From</label>
+                        <input
+                            type="date"
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                            className="form-input text-sm h-10 w-full"
+                        />
+                    </div>
 
-                <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">To</label>
-                    <input
-                        type="date"
-                        value={dateRange.end}
-                        onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                        className="form-input bg-background/50 text-sm h-10"
-                    />
+                    <div className="space-y-2">
+                        <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">To</label>
+                        <input
+                            type="date"
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                            className="form-input text-sm h-10 w-full"
+                        />
+                    </div>
                 </div>
 
                 <button
                     onClick={() => { setRegionFilter(""); setTypeFilter(""); setDateRange({ start: "", end: "" }); }}
-                    className="h-10 px-4 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
                 >
                     Reset Filters
                 </button>

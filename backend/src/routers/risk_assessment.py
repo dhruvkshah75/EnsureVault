@@ -344,12 +344,11 @@ def decide_claim(
             detail=f"Claim is already '{row['status']}' and cannot be reviewed again",
         )
 
+    # --- ATOMIC TRANSACTION ---
     try:
-        # Start transaction for atomic updates
-        db.start_transaction()
+        db.autocommit = False
 
         # Check if we should deduct from reserve
-        # (Using a robust check for 'Approved' status)
         target_status = str(body.status.value if hasattr(body.status, "value") else body.status).strip()
         if target_status == "Approved":
             # Fetch claim amount BEFORE updating status (cleaner)
@@ -365,8 +364,8 @@ def decide_claim(
 
             # Check for insufficient funds
             cursor.execute("SELECT balance FROM company_reserve WHERE id = 1")
-            new_bal = cursor.fetchone()["balance"]
-            if new_bal < 0:
+            res_bal = cursor.fetchone()
+            if res_bal and res_bal["balance"] < 0:
                 raise Exception(f"Insufficient funds in company reserve")
 
         # Update claim status
@@ -379,12 +378,14 @@ def decide_claim(
             (body.status.value, body.rejection_reason, claim_id),
         )
 
-        # Commit everything
         db.commit()
+
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"Decision failed and was rolled back: {str(e)}")
+    finally:
+        db.autocommit = True
 
     cursor.close()
     action = "approved" if body.status == ClaimStatus.APPROVED else "rejected"

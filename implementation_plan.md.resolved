@@ -1,0 +1,50 @@
+# Feature Implementation for Evaluation
+
+## User Review Required
+
+> [!IMPORTANT]
+> The AI Agent requires an LLM. Since this needs to be completed for tomorrow's evaluation, I suggest implementing a **simple Mock AI Agent** endpoint that acts as an insurance assistant (fast and guaranteed not to break due to API limits/keys), OR if you have an OpenAI/Gemini API key, we can integrate the real API. Let me know your preference when approving this plan!
+> Also, I will outline VPS deployment using standard [docker-compose.yml](file:///home/dhruv/sem4/DBMS/EnsureVault/docker-compose.yml), which is production-ready for this scale.
+
+## Proposed Changes
+
+### Database Accounts & Roles
+I will create a new SQL initialization script to automatically provision the required database profiles when Docker starts.
+#### [NEW] [v3_roles_and_users.sql](file:///home/dhruv/sem4/DBMS/EnsureVault/backend/sql/v3_roles_and_users.sql)
+- Creates `dba_admin` with `ALL PRIVILEGES` and `GRANT OPTION`.
+- Creates `data_analyst` with only `SELECT` (view only) on `ensurevault.*`.
+- Creates `claims_processor` with `SELECT`, `UPDATE` on specific tables (no create permissions).
+
+---
+
+### AI Agent Backend
+Add a new Chatbot API endpoint to simulate an intelligent assistant dealing with insurance workflows.
+#### [MODIFY] [backend/src/main.py](file:///home/dhruv/sem4/DBMS/EnsureVault/backend/src/main.py)
+- Include the new chat router.
+#### [NEW] [backend/src/routers/ai.py](file:///home/dhruv/sem4/DBMS/EnsureVault/backend/src/routers/ai.py)
+- `POST /api/v1/chat` endpoint holding the agent's logic (mocked or querying a real LLM based on your preference).
+
+---
+
+### AI Agent Frontend
+Add a simple chat interface to demonstrate the integration securely on the client side.
+#### [NEW] [frontend/components/chatbot.tsx](file:///home/dhruv/sem4/DBMS/EnsureVault/frontend/components/chatbot.tsx)
+- A floating chat widget in the bottom corner of the web application.
+#### [MODIFY] [frontend/app/layout.tsx](file:///home/dhruv/sem4/DBMS/EnsureVault/frontend/app/layout.tsx)
+- Inject the Chatbot component into the global layout so it is accessible from any page.
+
+---
+
+### Production Deployment Prep
+#### [NEW] [DEPLOYMENT.md](file:///home/dhruv/sem4/DBMS/EnsureVault/DEPLOYMENT.md)
+- Step-by-step instructions on deploying the [docker-compose.yml](file:///home/dhruv/sem4/DBMS/EnsureVault/docker-compose.yml) to an AWS EC2 or DigitalOcean droplet. includes steps for detached runs, port mappings, and domain setups.
+
+## Verification Plan
+
+### Automated Tests
+- Run `docker-compose up -d --build` to see if the DB compiles the new script without errors.
+- Test the FAST API `/chat` endpoint via cURL or Swagger.
+
+### Manual Verification
+- Log into the MySQL container `docker exec -it ensurevault-db mysql -u root -p` and test the permissions of `dba_admin`, `data_analyst`, and `claims_processor`.
+- Open the Next.js frontend on `localhost:3000`, interact with the AI Chat widget, and ensure it correctly responds or mocks the responses.

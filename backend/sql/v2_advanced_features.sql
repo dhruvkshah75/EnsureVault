@@ -33,8 +33,8 @@ SELECT
     a.name as agent_name,
     a.region,
     COUNT(p.policy_id) as total_policies_sold,
-    SUM(p.premium_amount) as total_premium_value,
-    SUM(c.amount) as total_commission_earned
+    COALESCE(SUM(p.premium_amount), 0) as total_premium_value,
+    COALESCE(SUM(c.amount), 0) as total_commission_earned
 FROM agent a
 LEFT JOIN policy p ON a.agent_id = p.agent_id
 LEFT JOIN commission_ledger c ON a.agent_id = c.agent_id

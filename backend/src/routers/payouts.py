@@ -101,6 +101,12 @@ def approve_claim(
         )
         new_txn_id = cursor.lastrowid
 
+        # Step 3: Deduct from Company Reserve
+        cursor.execute(
+            "UPDATE company_reserve SET balance = balance - %s WHERE id = 1",
+            (body.payout_amount,),
+        )
+
         db.commit()
 
     except Exception as e:
