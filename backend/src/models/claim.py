@@ -133,3 +133,10 @@ class DocumentResponse(BaseModel):
     claim_id: int = Field(..., description="Parent claim ID")
     doc_type: str = Field(..., min_length=1, description="Document category (e.g. 'ID Proof')")
     file_url: str = Field(..., min_length=1, description="URL/path to the uploaded file")
+
+
+class DocumentCreate(BaseModel):
+    """Request body for adding a document to a claim."""
+
+    doc_type: str = Field(..., min_length=1, description="Document type (e.g. 'ID Proof')")
+    file_url: str = Field(..., min_length=1, description="URL or path to the document")

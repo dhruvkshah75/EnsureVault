@@ -51,16 +51,34 @@ export default function Home() {
         </div>
       )}
 
-      {/* Admin / Agent — see all three */}
-      {(user?.role === "admin" || user?.role === "agent") && (
+      {/* Admin / Agent / Manager — see all three */}
+      {(user?.role === "admin" || user?.role === "agent" || user?.role === "claims_manager") && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mt-6">
-          <Link href="/customer/dashboard" className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform cursor-pointer">
-            <div className="p-4 bg-primary/10 rounded-full">
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-            <h2 className="text-2xl font-semibold">Customer Portal</h2>
-            <p className="text-muted-foreground">View customer policies and claim histories.</p>
-          </Link>
+          {user?.role === "admin" ? (
+            <Link href="/admin/dashboard" className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform cursor-pointer">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold">Admin Panel</h2>
+              <p className="text-muted-foreground">Manage policy types and agent workforce.</p>
+            </Link>
+          ) : user?.role === "claims_manager" ? (
+            <Link href="/manager/dashboard" className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform cursor-pointer">
+              <div className="p-4 bg-purple-500/10 rounded-full">
+                <ShieldCheck className="h-8 w-8 text-purple-500" />
+              </div>
+              <h2 className="text-2xl font-semibold">Claims Portal</h2>
+              <p className="text-muted-foreground">Verify evidence and adjudicate claims.</p>
+            </Link>
+          ) : (
+            <Link href="/agent/dashboard" className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform cursor-pointer">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold">Agent Portal</h2>
+              <p className="text-muted-foreground">Onboard your clients and issue policies.</p>
+            </Link>
+          )}
           <Link href="/admin/policies/create" className="glass-card p-6 flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform cursor-pointer">
             <div className="p-4 bg-secondary/10 rounded-full">
               <ShieldCheck className="h-8 w-8 text-secondary" />

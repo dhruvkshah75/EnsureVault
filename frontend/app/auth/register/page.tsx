@@ -27,12 +27,23 @@ export default function RegisterPage() {
         }
 
         setLoading(true);
-        // Mock registration logic
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+            const res = await fetch(`${API}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: formData.name, email: formData.email }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.detail ?? "Registration failed.");
+
             toast("Account created successfully! You can now log in.", "success");
             router.push("/auth/login");
-        }, 1500);
+        } catch (err: unknown) {
+            toast(err instanceof Error ? err.message : "Registration failed.", "error");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

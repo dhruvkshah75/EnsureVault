@@ -54,3 +54,17 @@ export const premiumCalcSchema = z.object({
 });
 
 export type PremiumCalcValues = z.infer<typeof premiumCalcSchema>;
+
+// ─── Admin Agent Creation ───────────────────────────────────────────────────
+export const agentFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  region: z.string().min(2, "Region must be at least 2 characters"),
+  commission_rate: z
+    .string()
+    .min(1, "Commission rate is required")
+    .refine((val: string) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100, {
+      message: "Commission rate must be between 0 and 100",
+    }),
+});
+
+export type AgentFormValues = z.infer<typeof agentFormSchema>;

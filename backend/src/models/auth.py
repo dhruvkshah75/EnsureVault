@@ -1,6 +1,35 @@
 from pydantic import BaseModel, Field
 
 
+class RegisterRequest(BaseModel):
+    """Request body for user registration."""
+
+    name: str = Field(
+        ...,
+        min_length=2,
+        max_length=150,
+        description="Full name of the new customer",
+        examples=["Jane Doe"],
+    )
+    email: str = Field(
+        ...,
+        min_length=5,
+        max_length=255,
+        description="User email address",
+        examples=["jane.doe@email.com"],
+    )
+    agent_id: int | None = Field(
+        None,
+        description="Optional ID of the agent onboarding this customer",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"name": "Jane Doe", "email": "jane.doe@email.com"}]
+        }
+    }
+
+
 class LoginRequest(BaseModel):
     """Request body for email-based authentication."""
 

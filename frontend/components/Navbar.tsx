@@ -49,7 +49,7 @@ export default function Navbar() {
             {/* Agent links */}
             {user?.role === "agent" && (
               <>
-                <Link href="/customer/dashboard" className="flex items-center gap-2 text-foreground/80 hover:text-accent transition-colors">
+                <Link href="/agent/dashboard" className="flex items-center gap-2 text-foreground/80 hover:text-accent transition-colors">
                   <Briefcase className="h-4 w-4" /> Portfolios
                 </Link>
                 <Link href="/premium-calculator" className="flex items-center gap-2 text-foreground/80 hover:text-accent transition-colors">
@@ -58,14 +58,26 @@ export default function Navbar() {
               </>
             )}
 
+            {/* Claims Manager links */}
+            {user?.role === "claims_manager" && (
+              <>
+                <Link href="/manager/dashboard" className="flex items-center gap-2 text-foreground/80 hover:text-purple-500 transition-colors">
+                  <ShieldCheck className="h-4 w-4" /> Adjudication
+                </Link>
+              </>
+            )}
+
             {/* Admin links */}
             {user?.role === "admin" && (
               <>
-                <Link href="/customer/dashboard" className="flex items-center gap-2 text-foreground/80 hover:text-secondary transition-colors">
-                  <User className="h-4 w-4" /> Customers
+                <Link href="/admin/dashboard" className="flex items-center gap-2 text-foreground/80 hover:text-secondary transition-colors">
+                  <User className="h-4 w-4" /> Dashboard
                 </Link>
                 <Link href="/admin/policies/create" className="flex items-center gap-2 text-foreground/80 hover:text-secondary transition-colors">
                   <ShieldCheck className="h-4 w-4" /> Management
+                </Link>
+                <Link href="/admin/agents/create" className="flex items-center gap-2 text-foreground/80 hover:text-secondary transition-colors">
+                  <PlusCircle className="h-4 w-4" /> Add Agent
                 </Link>
                 <Link href="/premium-calculator" className="flex items-center gap-2 text-foreground/80 hover:text-secondary transition-colors">
                   <Calculator className="h-4 w-4" /> Calculator
@@ -82,7 +94,8 @@ export default function Navbar() {
                   <span className="text-muted-foreground">{user.name}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${user.role === "admin" ? "bg-secondary/10 text-secondary border-secondary/30" :
                     user.role === "agent" ? "bg-accent/10 text-accent border-accent/30" :
-                      "bg-primary/10 text-primary border-primary/30"
+                      user.role === "claims_manager" ? "bg-purple-500/10 text-purple-500 border-purple-500/30" :
+                        "bg-primary/10 text-primary border-primary/30"
                     }`}>
                     {user.role}
                   </span>

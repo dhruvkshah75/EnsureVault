@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.database import init_pool, close_pool
-from src.routers import policy_types, policies, risk_assessment, premium, payouts, auth
+from src.routers import policy_types, policies, risk_assessment, premium, payouts, auth, agents, admin
 
 
 @asynccontextmanager
@@ -40,9 +40,11 @@ def health_check():
     return {"status": "ok", "service": "EnsureVault API", "version": "0.1.0"}
 
 
+app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(policy_types.router, prefix=settings.API_V1_PREFIX)
 app.include_router(policies.router, prefix=settings.API_V1_PREFIX)
 app.include_router(risk_assessment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(premium.router, prefix=settings.API_V1_PREFIX)
 app.include_router(payouts.router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
+app.include_router(agents.router, prefix=settings.API_V1_PREFIX)

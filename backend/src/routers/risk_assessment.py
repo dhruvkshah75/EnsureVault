@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from mysql.connector import MySQLConnection
 from typing import Optional
+from datetime import date
 from src.database import get_db
 from src.models.claim import (
     ClaimCreate,
@@ -9,6 +10,7 @@ from src.models.claim import (
     ClaimAssessmentResponse,
     DocumentResponse,
     ClaimStatus,
+    DocumentCreate,
 )
 from src.models.common import APIResponse, ErrorResponse
 
@@ -30,6 +32,12 @@ router = APIRouter(prefix="/claims", tags=["Risk Assessment"])
 )
 def list_claims(
     customer_id: Optional[int] = Query(None, gt=0, description="Filter by customer ID"),
+    agent_id: Optional[int] = Query(None, gt=0, description="Filter by agent ID"),
+    region: Optional[str] = Query(None, description="Filter by agent region"),
+    policy_type: Optional[str] = Query(None, description="Filter by policy type name"),
+    start_date: Optional[date] = Query(None, description="Start of incident date range"),
+    end_date: Optional[date] = Query(None, description="End of incident date range"),
+    status: Optional[str] = Query(None, description="Filter by claim status"),
     db: MySQLConnection = Depends(get_db),
 ):
     query = """
@@ -41,12 +49,32 @@ def list_claims(
         JOIN policy p ON cl.policy_id = p.policy_id
         JOIN customer c ON p.customer_id = c.customer_id
         JOIN policy_type pt ON p.type_id = pt.type_id
+        JOIN agent a ON p.agent_id = a.agent_id
         WHERE 1=1
     """
     params = []
     if customer_id:
         query += " AND p.customer_id = %s"
         params.append(customer_id)
+    if agent_id:
+        query += " AND p.agent_id = %s"
+        params.append(agent_id)
+    if region:
+        query += " AND a.region = %s"
+        params.append(region)
+    if policy_type:
+        query += " AND pt.type_name = %s"
+        params.append(policy_type)
+    if start_date:
+        query += " AND cl.incident_date >= %s"
+        params.append(start_date)
+    if end_date:
+        query += " AND cl.incident_date <= %s"
+        params.append(end_date)
+    if status:
+        query += " AND cl.status = %s"
+        params.append(status)
+
     query += " ORDER BY cl.claim_id DESC"
 
     cursor = db.cursor(dictionary=True)
@@ -228,6 +256,38 @@ def get_claim_documents(claim_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
+@router.post(
+    "/{claim_id}/documents",
+    response_model=APIResponse,
+    status_code=201,
+    summary="Add a document to a claim",
+    description="Link a supporting document (type and URL) to an existing claim.",
+)
+def add_claim_document(claim_id: int, body: DocumentCreate, db: MySQLConnection = Depends(get_db)):
+    cursor = db.cursor(dictionary=True)
+    
+    # Verify claim exists
+    cursor.execute("SELECT claim_id FROM claim WHERE claim_id = %s", (claim_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Claim {claim_id} not found")
+
+    try:
+        cursor.execute(
+            "INSERT INTO document (claim_id, doc_type, file_url) VALUES (%s, %s, %s)",
+            (claim_id, body.doc_type, body.file_url)
+        )
+        db.commit()
+        new_id = cursor.lastrowid
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    cursor.close()
+    return APIResponse(success=True, message="Document added successfully", data={"doc_id": new_id})
+
+
 @router.put(
     "/{claim_id}/decision",
     response_model=APIResponse,
@@ -285,6 +345,31 @@ def decide_claim(
         )
 
     try:
+        # Start transaction for atomic updates
+        db.start_transaction()
+
+        # Check if we should deduct from reserve
+        # (Using a robust check for 'Approved' status)
+        target_status = str(body.status.value if hasattr(body.status, "value") else body.status).strip()
+        if target_status == "Approved":
+            # Fetch claim amount BEFORE updating status (cleaner)
+            cursor.execute("SELECT claim_amount FROM claim WHERE claim_id = %s", (claim_id,))
+            amt_row = cursor.fetchone()
+            claim_amt = float(amt_row["claim_amount"]) if amt_row else 0.0
+
+            # Deduct from reserve (id=1)
+            cursor.execute(
+                "UPDATE company_reserve SET balance = balance - %s WHERE id = 1",
+                (claim_amt,)
+            )
+
+            # Check for insufficient funds
+            cursor.execute("SELECT balance FROM company_reserve WHERE id = 1")
+            new_bal = cursor.fetchone()["balance"]
+            if new_bal < 0:
+                raise Exception(f"Insufficient funds in company reserve")
+
+        # Update claim status
         cursor.execute(
             """
             UPDATE claim
@@ -293,6 +378,8 @@ def decide_claim(
             """,
             (body.status.value, body.rejection_reason, claim_id),
         )
+
+        # Commit everything
         db.commit()
     except Exception as e:
         db.rollback()
@@ -300,6 +387,5 @@ def decide_claim(
         raise HTTPException(status_code=400, detail=str(e))
 
     cursor.close()
-
     action = "approved" if body.status == ClaimStatus.APPROVED else "rejected"
     return APIResponse(success=True, message=f"Claim {claim_id} has been {action}")

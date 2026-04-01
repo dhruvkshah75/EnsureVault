@@ -250,3 +250,34 @@ def update_policy_status(
         cursor.close()
 
     return APIResponse(success=True, message=f"Policy status updated to {body.status.value}")
+
+
+@router.get(
+    "/nominees/all",
+    response_model=APIResponse,
+    summary="List all nominees for a customer",
+    description="Retrieve all nominees linked to any policy owned by the specified customer.",
+)
+def list_customer_nominees(
+    customer_id: int = Query(..., gt=0),
+    db: MySQLConnection = Depends(get_db),
+):
+    cursor = db.cursor(dictionary=True)
+    cursor.execute(
+        """
+        SELECT n.nom_id, n.policy_id, n.nominee_name, n.relation, n.share_percent, pt.type_name as policy_type
+        FROM nominee n
+        JOIN policy p ON n.policy_id = p.policy_id
+        JOIN policy_type pt ON p.type_id = pt.type_id
+        WHERE p.customer_id = %s
+        """,
+        (customer_id,),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+    
+    return APIResponse(
+        success=True,
+        message=f"Found {len(rows)} nominees",
+        data=rows
+    )
