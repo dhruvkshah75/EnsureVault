@@ -25,7 +25,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
-ignore = ["E501"] # Ignore long lines already handled by formatter
+ignore = ["E501", "B008"] # Ignore long lines and Depends() in defaults
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

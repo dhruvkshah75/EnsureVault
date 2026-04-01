@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 import google.generativeai as genai
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
 from src.config import settings
 
 router = APIRouter(prefix="/chat", tags=["AI Agent"])
@@ -60,6 +61,6 @@ async def chat_with_agent(payload: ChatMessage):
         """
         response = await model.generate_content_async(prompt)
         return ChatResponse(success=True, reply=response.text)
-    except Exception as e:
+    except Exception:
         # Fallback to mock on API error
         return ChatResponse(success=True, reply=get_mock_reply(payload.message))

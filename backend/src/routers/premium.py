@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
+from src.models.common import APIResponse, ErrorResponse
 from src.models.premium import (
     PremiumCalculateRequest,
     PremiumCalculateResponse,
     RiskFactorsResponse,
 )
-from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/premium", tags=["Premium Calculation"])
 
@@ -56,7 +57,7 @@ def calculate_premium(
             pass
     except Exception as e:
         cursor.close()
-        raise HTTPException(status_code=500, detail=f"Premium calculation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Premium calculation failed: {str(e)}") from e
 
     cursor.close()
 

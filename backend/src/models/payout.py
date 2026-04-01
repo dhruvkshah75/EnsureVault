@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
 from datetime import date
 from enum import Enum
-from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class PaymentMode(str, Enum):

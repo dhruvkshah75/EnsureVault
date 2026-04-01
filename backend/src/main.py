@@ -4,8 +4,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
-from src.database import init_pool, close_pool
-from src.routers import policy_types, policies, risk_assessment, premium, payouts, auth, agents, admin, ai
+from src.database import close_pool, init_pool
+from src.routers import (
+    admin,
+    agents,
+    ai,
+    auth,
+    payouts,
+    policies,
+    policy_types,
+    premium,
+    risk_assessment,
+)
 
 
 @asynccontextmanager

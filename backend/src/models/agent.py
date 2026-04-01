@@ -1,5 +1,7 @@
 from decimal import Decimal
+
 from pydantic import BaseModel, Field
+
 
 class AgentCreate(BaseModel):
     """Request body for creating a new agent."""

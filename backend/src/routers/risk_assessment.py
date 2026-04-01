@@ -1,16 +1,18 @@
+from datetime import date
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from mysql.connector import MySQLConnection
-from typing import Optional
-from datetime import date
+
 from src.database import get_db
 from src.models.claim import (
+    ClaimAssessmentResponse,
     ClaimCreate,
     ClaimDecisionRequest,
     ClaimResponse,
-    ClaimAssessmentResponse,
-    DocumentResponse,
     ClaimStatus,
     DocumentCreate,
+    DocumentResponse,
 )
 from src.models.common import APIResponse, ErrorResponse
 
@@ -129,7 +131,7 @@ def create_claim(body: ClaimCreate, db: MySQLConnection = Depends(get_db)):
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     cursor.close()
     return APIResponse(success=True, message="Claim submitted successfully", data={"claim_id": new_id})
@@ -207,7 +209,7 @@ def assess_claim_risk(claim_id: int, db: MySQLConnection = Depends(get_db)):
             pass
     except Exception as e:
         cursor.close()
-        raise HTTPException(status_code=500, detail=f"Risk assessment failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Risk assessment failed: {str(e)}") from e
 
     cursor.close()
 
@@ -282,7 +284,7 @@ def add_claim_document(claim_id: int, body: DocumentCreate, db: MySQLConnection 
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     cursor.close()
     return APIResponse(success=True, message="Document added successfully", data={"doc_id": new_id})
@@ -366,7 +368,7 @@ def decide_claim(
             cursor.execute("SELECT balance FROM company_reserve WHERE id = 1")
             res_bal = cursor.fetchone()
             if res_bal and res_bal["balance"] < 0:
-                raise Exception(f"Insufficient funds in company reserve")
+                raise Exception("Insufficient funds in company reserve")
 
         # Update claim status
         cursor.execute(
@@ -383,7 +385,7 @@ def decide_claim(
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=400, detail=f"Decision failed and was rolled back: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Decision failed and was rolled back: {str(e)}") from e
     finally:
         db.autocommit = True
 

@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
+from src.models.common import APIResponse, ErrorResponse
 from src.models.policy_type import (
     PolicyTypeCreate,
-    PolicyTypeUpdate,
     PolicyTypeResponse,
+    PolicyTypeUpdate,
 )
-from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/policy-types", tags=["Policy Types"])
 
@@ -99,7 +100,7 @@ def create_policy_type(
         new_id = cursor.lastrowid
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 
@@ -153,7 +154,7 @@ def update_policy_type(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 
@@ -186,7 +187,7 @@ def delete_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 

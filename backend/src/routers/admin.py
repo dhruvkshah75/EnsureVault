@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
 from src.models.admin import AdminDashboardResponse, AdminKPIs, LeaderboardEntry
 from src.models.common import APIResponse
@@ -63,6 +64,6 @@ def get_admin_dashboard(db: MySQLConnection = Depends(get_db)):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         cursor.close()

@@ -1,15 +1,17 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from mysql.connector import MySQLConnection
-from typing import Optional
+
 from src.database import get_db
-from src.models.policy import (
-    PolicyCreate,
-    PolicyStatusUpdate,
-    PolicyResponse,
-    PolicyDetailResponse,
-    NomineeResponse,
-)
 from src.models.common import APIResponse, ErrorResponse
+from src.models.policy import (
+    NomineeResponse,
+    PolicyCreate,
+    PolicyDetailResponse,
+    PolicyResponse,
+    PolicyStatusUpdate,
+)
 from src.utils.validators import validate_date_range
 
 router = APIRouter(prefix="/policies", tags=["Policies"])
@@ -201,7 +203,7 @@ def create_policy(
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     cursor.close()
 
@@ -245,7 +247,7 @@ def update_policy_status(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 

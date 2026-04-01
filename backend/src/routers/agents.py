@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
 from src.models.agent import AgentCreate, AgentResponse
 from src.models.common import APIResponse
@@ -85,7 +86,7 @@ def create_agent(body: AgentCreate, db: MySQLConnection = Depends(get_db)):
     except Exception as e:
         db.rollback()
         cursor.close()
-        raise HTTPException(status_code=500, detail="Failed to create agent.")
+        raise HTTPException(status_code=500, detail="Failed to create agent.") from e
         
     cursor.close()
     return APIResponse(

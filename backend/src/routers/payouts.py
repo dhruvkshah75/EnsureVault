@@ -1,15 +1,17 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
-from typing import Any
+
 from src.database import get_db
+from src.models.common import APIResponse, ErrorResponse
 from src.models.payout import (
     ApproveClaimRequest,
-    PremiumPaymentRequest,
     ApproveClaimResponse,
-    PremiumPaymentResponse,
     PaymentRecord,
+    PremiumPaymentRequest,
+    PremiumPaymentResponse,
 )
-from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/payouts", tags=["Payouts & Finance"])
 
@@ -115,7 +117,7 @@ def approve_claim(
         raise HTTPException(
             status_code=500,
             detail=f"Transaction failed and was rolled back: {str(e)}",
-        )
+        ) from e
     finally:
         db.autocommit = True
 
@@ -199,7 +201,7 @@ def pay_premium(
         raise HTTPException(
             status_code=500,
             detail=f"Transaction failed and was rolled back: {str(e)}",
-        )
+        ) from e
     finally:
         db.autocommit = True
 
