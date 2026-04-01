@@ -29,5 +29,5 @@ ignore = ["E501", "B008"] # Ignore long lines and Depends() in defaults
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["."]
 asyncio_mode = "auto"
