@@ -44,6 +44,8 @@ export default function NewClaim() {
   });
 
   useEffect(() => {
+    if (!user) return; // Wait for AuthContext to hydrate
+
     fetch(`${API}/policies/?customer_id=${customerId}&status=Active`)
       .then((r) => r.json())
       .then((json) => {
@@ -56,7 +58,7 @@ export default function NewClaim() {
         toast("Could not load your policies from the server.", "error");
       })
       .finally(() => setLoadingPolicies(false));
-  }, [setValue, toast]);
+  }, [setValue, toast, customerId, user]);
 
   const onSubmit = async (data: ClaimFormValues) => {
     setFetchError(null);

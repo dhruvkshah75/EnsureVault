@@ -45,6 +45,8 @@ export default function CustomerDashboard() {
   const customerId = user?.customer_id ?? 1;
 
   useEffect(() => {
+    if (!user) return; // Wait for AuthContext to hydrate
+
     const fetchData = async () => {
       try {
         const [pRes, cRes] = await Promise.all([
@@ -69,7 +71,7 @@ export default function CustomerDashboard() {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, customerId, user]);
 
   if (loading) {
     return (
