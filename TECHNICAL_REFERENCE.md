@@ -1,67 +1,102 @@
 # Technical Reference — EnsureVault Architecture
 
-This document provides a comprehensive overview of the EnsureVault codebase, detailing the purpose and function of key files and directories to assist in maintenance, evaluation, and future development.
-
-## 1. Project Overview
-EnsureVault is a modern insurance management system built with a decoupled architecture:
-- **Backend**: FastAPI (Python 3.12) with MySQL 8.0.
-- **Frontend**: Next.js 14+ (App Router) with Tailwind CSS and Lucide React.
-- **Orchestration**: Docker Compose and GitHub Actions (CI).
+This document provides a deep dive into the EnsureVault codebase, detailing the architecture, data flow, and specific implementation details for each component.
 
 ---
 
-## 2. Backend Architecture (`/backend`)
-The backend follows a modular design centered around FastAPI's dependency injection system.
+## 1. System Architecture
+EnsureVault follows a modern, decoupled client-server architecture designed for scalability and high-performance insurance operations.
 
-### Core Files
-- **`src/main.py`**: The application entry point. It handles CORS configuration, middleware setup, and registers all feature routers.
-- **`src/database.py`**: Manages the MySQL connection pool. It provides the `get_db` dependency used throughout the API.
-- **`src/config.py`**: Centralized configuration management using Pydantic Settings, handling environment variables (e.g., `GEMINI_API_KEY`).
+```mermaid
+graph TD
+    User((User/Admin)) -->|React/Next.js| Frontend[Frontend SPA]
+    Frontend -->|REST API| Backend[FastAPI Backend]
+    Backend -->|SQL Query| DB[(MySQL 8.0)]
+    Backend -->|AI SDK| Gemini[Google Gemini AI]
+```
 
-### Feature Routers (`src/routers/`)
-- **`ai.py`**: Integrates with Google Gemini AI for the assistant feature.
-- **`auth.py`**: Handles user login and registration for customers and internal staff.
-- **`policies.py`**: Core CRUD for insurance policies and nominee management.
-- **`payouts.py`**: Manages claim approvals and financial transactions with atomic reserve deduction.
-- **`risk_assessment.py`**: Interfaces with SQL stored procedures for complex insurance risk logic.
-- **`admin.py`**: Provides high-performance analytics and leaderboard metrics for the executive view.
-
-### Data Models (`src/models/`)
-Contains Pydantic schemas that enforce strict type checking and validation for all API requests and responses.
-
-### Testing (`tests/`)
-- **`conftest.py`**: Sets up the TestClient and mocks database connections to ensure tests can run in CI without a live database.
-- **`test_main.py`**: Sanity and health-check tests for the FastAPI application.
+- **Backend**: Python 3.12, FastAPI, MySQL-Connector.
+- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Lucide icons.
+- **Quality**: GitHub Actions, Ruff, Pytest, Jest.
 
 ---
 
-## 3. Frontend Architecture (`/frontend`)
-The frontend is a React-based Single Page Application (SPA) leveraging Next.js for routing and server-side rendering where appropriate.
+## 2. Backend Deep Dive (`/backend`)
 
-### App Structure (`app/`)
-- **`layout.tsx`**: Defines the global UI wrapper, including the Navbar, Chatbot, and Toast notifications.
-- **`page.tsx`**: The home page, which serves as a role-based portal (different views for Admin, Agent, and Customer).
-- **`globals.css`**: The "Elite UI" design system, containing custom Tailwind layers for glassmorphism and the premium color palette.
+### Core Infrastructure
+- **`src/main.py`**: 
+    - Initializes the FastAPI app.
+    - Configures CORS for the frontend domain.
+    - Registers all routers under the `/api/v1` prefix.
+    - Implements a `lifespan` event to manage the database connection pool properly.
+- **`src/database.py`**: 
+    - Implements MySQL connection pooling using `mysql.connector.pooling`.
+    - `get_db()`: A generator dependency that yields a connection and ensures it returns to the pool after the request.
+- **`src/config.py`**:
+    - Uses Pydantic's `BaseSettings` for type-safe environment variable loading.
+    - Key variables: `DATABASE_URL`, `GEMINI_API_KEY`.
 
-### Context & State (`context/`)
-- **`AuthContext.tsx`**: Manages the global authentication state, tracking the logged-in user's role and ID.
-
-### Components (`components/`)
-- **`Chatbot.tsx`**: The "Elite" AI widget featuring glassmorphism and concierge-style animations.
-- **`Navbar.tsx`**: Responsive navigation bar with role-based visibility.
+### Functional Routers (`src/routers/`)
+- **`ai.py`**: 
+    - Implements the "AI Concierge".
+    - **Lazy Initialization**: The Gemini model is initialized only on the first request to save resources.
+    - **Mock Fallback**: If the `GEMINI_API_KEY` is missing or the service is down, it falls back to a deterministic insurance-specific logic to ensure the UI stays functional.
+- **`payouts.py`**:
+    - **Atomic Transactions**: Payouts are handled within a manual transaction (`db.autocommit = False`).
+    - **Reserve Management**: Deducts funds from the `company_reserve` table only if the claim status is successfully updated to 'Approved'.
+- **`risk_assessment.py`**:
+    - Directly interfaces with MySQL stored procedures (e.g., `CALL assess_claim_risk`).
+    - Handles complex risk factor calculations derived from customer history and policy statistics.
+- **`admin.py`**:
+    - Fetches metrics from optimized SQL views (`v_agent_leaderboard`).
+    - Uses Pydantic models to validate large analytical datasets before sending them to the dashboard.
 
 ---
 
-## 4. Database & SQL (`/backend/sql`)
-The database logic is heavily optimized using MySQL features to ensure performance and data integrity.
+## 3. Frontend Deep Dive (`/frontend`)
 
-- **`schema.sql`**: Definitive table structures and foreign key relationships.
-- **`triggers.sql`**: Automated business rules (e.g., preventing claim filing on expired policies, auto-calculating agent commissions).
-- **`v2_advanced_features.sql`**: Defines the `v_agent_leaderboard` view and the `company_reserve` table for financial management.
+### Architecture & Design System
+- **App Router**: Uses Next.js 14 App Router for directory-based navigation and optimized bundling.
+- **`globals.css`**: Defines the "Elite UI" design system.
+    - **Glassmorphism**: Custom utilities like `.glass-card` using `backdrop-blur-md` and `bg-white/10`.
+    - **Animations**: Custom keyframes for `animate-slide-up` and `animate-fade-in`.
+
+### Key Components (`components/`)
+- **`Chatbot.tsx`**: 
+    - A floating, persistence-aware AI widget.
+    - Uses a concierge-style floating action button (FAB) that opens into a professional Navy/Emerald chat window.
+    - Synchronized with system toasts to ensure visibility.
+- **`Navbar.tsx`**: 
+    - Implements role-based navigation.
+    - Admins see "Admin Dashboard", Customers see "My Portfolio".
+
+### Global State (`context/AuthContext.tsx`)
+- Provides a `useAuth` hook throughout the app.
+- Stores the current user's session in memory/local storage to persist login status across refreshes.
 
 ---
 
-## 5. Infrastructure & CI/CD
-- **`docker-compose.yml`**: Orchestrates the multi-container environment (db, backend, frontend).
-- **`.github/workflows/main.yml`**: The CI pipeline that automatically runs Ruff (linting), Pytest (backend tests), and Jest (frontend tests) on every push.
-- **`DEPLOYMENT.md`**: Step-by-step instructions for production deployment.
+## 4. Database Logic (`/backend/sql`)
+
+### Business Rules (Triggers)
+The database enforces complex business logic via triggers in `triggers.sql`:
+- **Commission Auto-Calculation**: Automatically calculates and records agent commission whenever a policy is issued.
+- **KYC Verification**: Prevents claim filing for customers with 'Pending' or 'Rejected' KYC status.
+- **Expiration Guard**: Automatically marks policies as 'Expired' when the current date exceeds the `end_date`.
+
+### Performance Views
+- **`v_agent_leaderboard`**: Pre-calculates sales performance and commission rankings to keep the Admin Dashboard loading time under 100ms even with large datasets.
+
+---
+
+## 5. CI/CD & Reliability
+
+### Automated Quality Gates
+The project uses GitHub Actions (`.github/workflows/main.yml`) to enforce high code quality:
+1. **Ruff (Backend)**: Enforces industry-standard Python linting and import sorting.
+2. **Pytest (Backend)**: Runs sanity checks using a mocked database environment.
+3. **Jest (Frontend)**: Verifies UI component rendering and authentication logic.
+4. **Docker Build**: Every push verifies that the production images can be built successfully.
+
+### Deployment instructions
+Refer to [DEPLOYMENT.md](file:///home/dhruv/sem4/DBMS/EnsureVault/DEPLOYMENT.md) for full instructions on running the system using Docker Compose.
