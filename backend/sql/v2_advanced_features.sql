@@ -41,7 +41,31 @@ LEFT JOIN commission_ledger c ON a.agent_id = c.agent_id
 GROUP BY a.agent_id, a.name, a.region
 ORDER BY total_premium_value DESC;
 
+-- ============================================================
 -- 4. Commission Trigger
+-- ============================================================
+-- Purpose: Automatically calculate and record agent commissions when a payment succeeds
+-- 
+-- Trigger Event: AFTER UPDATE ON payment table
+-- Trigger Timing: Fires after a payment record is modified
+-- 
+-- Logic Flow:
+-- 1. Detects when a payment status changes from any state to 'Success'
+--    (Prevents duplicate commission entries for already-successful payments)
+-- 2. Retrieves the agent_id who sold the policy from the policy table
+-- 3. Looks up the agent's commission_rate percentage from the agent table
+-- 4. Calculates commission: payment_amount × (commission_rate / 100)
+--    Example: $1000 payment × 5% = $50 commission
+-- 5. Inserts a record into commission_ledger with:
+--    - agent_id: Which agent earned this commission
+--    - policy_id: Which policy generated this commission
+--    - amount: Calculated commission value
+--    - earned_at: Auto-timestamped to current time
+-- 
+-- Business Rule: Agents earn commission only on successful premium payments
+-- This ensures agents are credited immediately when customers pay their premiums
+-- ============================================================
+
 DROP TRIGGER IF EXISTS trg_calculate_commission;
 
 DELIMITER $$

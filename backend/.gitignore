@@ -11,3 +11,7 @@ __pycache__/
 # IDE settings
 .vscode/
 .idea/
+
+# add the cache 
+.ruff_cache
+.pytest_cache
