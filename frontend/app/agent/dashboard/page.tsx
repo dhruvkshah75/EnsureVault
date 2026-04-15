@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
-import { Briefcase, Users, UserPlus, Mail, ShieldCheck, AlertCircle, Loader2 } from "lucide-react";
+import { Briefcase, Users, UserPlus, Mail, ShieldCheck, AlertCircle, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -22,14 +22,34 @@ interface Customer {
     kyc_status: string;
 }
 
+interface PolicyRequest {
+    request_id: number;
+    customer_id: number;
+    customer_name: string;
+    customer_email: string;
+    agent_id: number;
+    type_id: number;
+    type_name: string;
+    start_date: string;
+    end_date: string;
+    premium_amount: string;
+    status: string;
+    requested_at: string;
+}
+
 export default function AgentDashboard() {
     const { user } = useAuth();
     const { toast } = useToast();
 
     const [agent, setAgent] = useState<Agent | null>(null);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<PolicyRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [approving, setApproving] = useState<number | null>(null);
+    const [rejecting, setRejecting] = useState<number | null>(null);
+    const [rejectionReason, setRejectionReason] = useState<{ [key: number]: string }>({});
+    const [showRejectForm, setShowRejectForm] = useState<number | null>(null);
 
     // Onboarding form state
     const [newName, setNewName] = useState("");
@@ -41,29 +61,80 @@ export default function AgentDashboard() {
 
         const fetchData = async () => {
             try {
-                const [aRes, custRes] = await Promise.all([
+                const [aRes, custRes, reqRes] = await Promise.all([
                     fetch(`${API}/agents/${user.user_id}`),
-                    fetch(`${API}/agents/${user.user_id}/customers`)
+                    fetch(`${API}/agents/${user.user_id}/customers`),
+                    fetch(`${API}/policies/requests/pending?agent_id=${user.user_id}`)
                 ]);
 
                 if (!aRes.ok) throw new Error("Failed to fetch agent profile.");
+                if (!custRes.ok) throw new Error("Failed to fetch customers.");
 
-                const aJson = await aRes.json();
-                const custJson = await custRes.json();
+                const aData = await aRes.json();
+                const custData = await custRes.json();
+                const reqData = reqRes.ok ? await reqRes.json() : { data: [] };
 
-                setAgent(aJson.data);
-                setCustomers(custJson.data ?? []);
-            } catch (e: unknown) {
-                const message = e instanceof Error ? e.message : "Unknown error";
+                setAgent(aData.data);
+                setCustomers(custData.data ?? []);
+                setPendingRequests(reqData.data ?? []);
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Unknown error";
                 setError(message);
-                toast("Could not load your agent dashboard.", "error");
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [user, toast]);
+    }, [user]);
+
+    const handleApprove = async (requestId: number) => {
+        if (!user) return;
+        setApproving(requestId);
+        try {
+            const res = await fetch(`${API}/policies/requests/${requestId}/approve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewed_by: user.user_id })
+            });
+
+            if (!res.ok) throw new Error("Failed to approve");
+            
+            const json = await res.json();
+            toast(`Policy approved! New Policy ID: ${json.data.created_policy_id}`, "success");
+            setPendingRequests(p => p.filter(r => r.request_id !== requestId));
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Unknown error";
+            toast(message, "error");
+        } finally {
+            setApproving(null);
+        }
+    };
+
+    const handleReject = async (requestId: number) => {
+        if (!user) return;
+        const reason = rejectionReason[requestId] || "No reason provided";
+        setRejecting(requestId);
+        try {
+            const res = await fetch(`${API}/policies/requests/${requestId}/reject`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewed_by: user.user_id, reason })
+            });
+
+            if (!res.ok) throw new Error("Failed to reject");
+            
+            toast("Policy request rejected.", "success");
+            setPendingRequests(p => p.filter(r => r.request_id !== requestId));
+            setShowRejectForm(null);
+            setRejectionReason(r => ({ ...r, [requestId]: "" }));
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Unknown error";
+            toast(message, "error");
+        } finally {
+            setRejecting(null);
+        }
+    };
 
     const handleOnboard = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -141,6 +212,103 @@ export default function AgentDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Pending Policy Requests Section */}
+            {pendingRequests.length > 0 && (
+                <div className="glass-card p-8 border-t-4 border-t-amber-500">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-amber-500/10 rounded-xl">
+                            <Clock className="w-6 h-6 text-amber-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold">Policy Requests Pending Review</h2>
+                            <p className="text-sm text-muted-foreground">{pendingRequests.length} customer{pendingRequests.length !== 1 ? 's' : ''} waiting for approval.</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {pendingRequests.map((req) => (
+                            <div
+                                key={req.request_id}
+                                className="p-6 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-all"
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Customer</p>
+                                        <p className="text-lg font-bold">{req.customer_name}</p>
+                                        <p className="text-xs text-muted-foreground">{req.customer_email}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Insurance Type</p>
+                                        <p className="text-lg font-bold">{req.type_name}</p>
+                                        <p className="text-sm text-amber-600">Requested: {new Date(req.requested_at).toLocaleDateString()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Coverage Period</p>
+                                        <p className="text-sm font-semibold">{new Date(req.start_date).toLocaleDateString()} to {new Date(req.end_date).toLocaleDateString()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Annual Premium</p>
+                                        <p className="text-2xl font-bold text-primary">₹{Number(req.premium_amount).toLocaleString()}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-4 border-t border-amber-500/10">
+                                    <button
+                                        onClick={() => handleApprove(req.request_id)}
+                                        disabled={approving === req.request_id}
+                                        className="flex-1 px-4 py-2 bg-green-500/20 text-green-600 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+                                    >
+                                        {approving === req.request_id ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <CheckCircle className="w-4 h-4" />
+                                        )}
+                                        {approving === req.request_id ? "Approving..." : "Approve & Create Policy"}
+                                    </button>
+
+                                    {showRejectForm === req.request_id ? (
+                                        <div className="flex-1 flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Reason for rejection..."
+                                                value={rejectionReason[req.request_id] || ""}
+                                                onChange={(e) => setRejectionReason(r => ({ ...r, [req.request_id]: e.target.value }))}
+                                                className="flex-1 px-3 py-2 bg-background border border-red-500/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            />
+                                            <button
+                                                onClick={() => handleReject(req.request_id)}
+                                                disabled={rejecting === req.request_id}
+                                                className="px-4 py-2 bg-red-500/20 text-red-600 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-all flex items-center gap-2 font-medium disabled:opacity-50"
+                                            >
+                                                {rejecting === req.request_id ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <XCircle className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setShowRejectForm(null)}
+                                                className="px-3 py-2 border border-border rounded-lg hover:bg-background/80 transition-all"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowRejectForm(req.request_id)}
+                                            className="flex-1 px-4 py-2 bg-red-500/20 text-red-600 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-all flex items-center justify-center gap-2 font-medium"
+                                        >
+                                            <XCircle className="w-4 h-4" />
+                                            Reject
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
