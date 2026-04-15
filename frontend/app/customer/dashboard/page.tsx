@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FileText, Clock, AlertCircle, Loader2, X, CreditCard, Lock, CheckCircle, Users } from "lucide-react";
+import { FileText, Clock, AlertCircle, Loader2, X, CreditCard, Lock, CheckCircle, Users, ShoppingCart } from "lucide-react";
 import { useToast } from "@/components/Toast";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -131,12 +131,20 @@ export default function CustomerDashboard() {
             Welcome back, <span className="text-foreground font-semibold">{user?.name}</span>. Here&apos;s an overview of your insurance portfolio.
           </p>
         </div>
-        <Link
-          href="/customer/claims/new"
-          className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20 hover:-translate-y-0.5"
-        >
-          <AlertCircle className="w-5 h-5" /> Report Incident
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/customer/policies/request"
+            className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20 hover:-translate-y-0.5"
+          >
+            <ShoppingCart className="w-5 h-5" /> Request Policy
+          </Link>
+          <Link
+            href="/customer/claims/new"
+            className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20 hover:-translate-y-0.5"
+          >
+            <AlertCircle className="w-5 h-5" /> Report Incident
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

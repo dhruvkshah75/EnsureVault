@@ -12,6 +12,7 @@ from src.routers import (
     auth,
     payouts,
     policies,
+    policy_requests,
     policy_types,
     premium,
     risk_assessment,
@@ -53,6 +54,7 @@ def health_check():
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(policy_types.router, prefix=settings.API_V1_PREFIX)
 app.include_router(policies.router, prefix=settings.API_V1_PREFIX)
+app.include_router(policy_requests.router, prefix=settings.API_V1_PREFIX)
 app.include_router(risk_assessment.router, prefix=settings.API_V1_PREFIX)
 app.include_router(premium.router, prefix=settings.API_V1_PREFIX)
 app.include_router(payouts.router, prefix=settings.API_V1_PREFIX)
