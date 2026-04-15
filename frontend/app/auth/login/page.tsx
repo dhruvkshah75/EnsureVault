@@ -40,8 +40,8 @@ export default function LoginPage() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.detail ?? "Invalid credentials.");
 
-            const { name, role, user_id, customer_id, email, kyc_status } = json.data;
-            login(role, { name, user_id, customer_id, email, kyc_status });
+            const { name, role, user_id, customer_id, email: userEmail, kyc_status } = json.data;
+            login(role, { name, user_id, customer_id, email: userEmail, kyc_status });
 
             if (role === "customer") router.push("/customer/dashboard");
             else if (role === "agent") router.push("/agent/dashboard");
