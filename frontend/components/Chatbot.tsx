@@ -116,7 +116,7 @@ export default function Chatbot() {
                                 value={input}
                                 onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                                 onChange={(e) => setInput(e.target.value)}
-                                className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-inner"
+                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-12 text-sm text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all shadow-sm"
                                 placeholder="Consult the vault..."
                             />
                             <button
