@@ -139,8 +139,7 @@ TECHNICAL ARCHITECTURE (for technical questions)
   • CI/CD: GitHub Actions runs Ruff (Python linting), Pytest (backend tests),
     Jest (frontend tests), and Docker build verification on every push.
   • Deployment: Docker Compose orchestrates both frontend and backend containers.
-  • AI: Google Gemini 1.5 Flash with a deterministic mock fallback if the API
-    key is unavailable.
+  • AI: Google Gemini 1.5 Flash for high-concurrency natural language understanding.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DEMO ACCOUNTS (for questions about logging in / testing)
