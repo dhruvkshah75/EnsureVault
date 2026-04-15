@@ -209,4 +209,30 @@ async def chat_with_agent(payload: ChatMessage):
         response = await model.generate_content_async(prompt)
         return ChatResponse(success=True, reply=response.text)
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"AI Assistant error: {str(e)}")
+        error_msg = str(e)
+        if "429" in error_msg or "quota" in error_msg.lower():
+            # Fallback demo response when quota is exceeded
+            user_question = payload.message.lower()
+            demo_responses = {
+                "claims manager": "A Claims Manager reviews and approves/rejects insurance claims. They can filter claims by region and policy type, and issue decisions with mandatory reasoning.",
+                "agent": "An Agent manages their assigned client portfolio, onboards new customers, issues policies, and earns commission on premium payments.",
+                "customer": "A Customer can view policies, manage beneficiaries, file claims, track claim status, make premium payments, and use the Premium Calculator.",
+                "admin": "An Admin has full system oversight, monitors key metrics, views the Top Performing Agents leaderboard, and configures policy types.",
+                "policy": "EnsureVault offers three insurance types: Health Insurance, Car Insurance, and Home Insurance. Each has its own pricing model based on age, risk factors, and coverage amount.",
+                "claim": "You can file a claim by uploading supporting documents and describing the incident. Claims go through Pending → Approved/Rejected workflow.",
+                "payment": "Premium payments can be made through an integrated PCI-DSS compliant gateway that supports Visa, Mastercard, and RuPay cards.",
+                "kyc": "KYC (Know Your Customer) verification is required before filing claims. Customers with Pending or Rejected KYC status cannot submit claims.",
+            }
+            
+            # Find matching response
+            for keyword, response in demo_responses.items():
+                if keyword in user_question:
+                    return ChatResponse(success=True, reply=response)
+            
+            # Default demo response
+            return ChatResponse(
+                success=True, 
+                reply="Welcome to EnsureVault! I can help you with policies, claims, payments, and roles. What would you like to know?"
+            )
+        else:
+            raise HTTPException(status_code=503, detail="AI Assistant temporarily unavailable. Please try again soon.")

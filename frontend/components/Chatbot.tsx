@@ -35,11 +35,24 @@ export default function Chatbot() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: userMsg }),
+                signal: AbortSignal.timeout(30000), // 30 second timeout
             });
             const data = await res.json();
-            setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+            
+            if (res.ok && data.reply) {
+                setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+            } else if (data.detail) {
+                // Handle error response from API
+                setMessages((prev) => [...prev, { role: 'assistant', text: 'I encountered an issue processing your request. Please try again later.' }]);
+            } else {
+                setMessages((prev) => [...prev, { role: 'assistant', text: 'Unable to process your request. Please try again.' }]);
+            }
         } catch (e) {
-            setMessages((prev) => [...prev, { role: 'assistant', text: 'Service unavailable. My systems are currently undergoing maintenance.' }]);
+            if (e instanceof Error && e.name === 'AbortError') {
+                setMessages((prev) => [...prev, { role: 'assistant', text: 'Request timed out. Please try again.' }]);
+            } else {
+                setMessages((prev) => [...prev, { role: 'assistant', text: 'Service unavailable. My systems are currently undergoing maintenance.' }]);
+            }
         } finally {
             setIsLoading(false);
         }
