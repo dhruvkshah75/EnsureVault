@@ -1,5 +1,5 @@
 import google.generativeai as genai
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from src.config import settings
@@ -196,78 +196,18 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-def get_mock_reply(user_msg: str) -> str:
-    msg = user_msg.lower()
-    if any(w in msg for w in ("hello", "hi", "hey")):
-        return (
-            "Hello! I'm the EnsureVault Assistant. I can help you with policies, "
-            "claims, payments, and navigating the portal. What would you like to know?"
-        )
-    elif "policy" in msg or "policies" in msg:
-        return (
-            "EnsureVault offers Health, Car, and Home insurance policies. "
-            "Agents issue policies to customers after an Admin configures the policy type. "
-            "You can view your active policies and their premiums from your Customer Dashboard."
-        )
-    elif "claim" in msg:
-        return (
-            "To file a claim, go to your Customer Dashboard and click 'Report Incident' or "
-            "'New Claim'. Upload your supporting documents and describe the incident. "
-            "Note: your KYC must be Verified before you can submit a claim."
-        )
-    elif "kyc" in msg:
-        return (
-            "KYC (Know Your Customer) verification is required before you can file claims. "
-            "Your agent will onboard you with a Pending KYC status. "
-            "Complete your profile verification to get it updated to Verified."
-        )
-    elif "payment" in msg or "premium" in msg or "billing" in msg:
-        return (
-            "Premium payments are made via the 'Make a Payment' button in the Premium Billing "
-            "section of your dashboard. The gateway is PCI-DSS compliant and supports "
-            "Visa, Mastercard, and RuPay cards."
-        )
-    elif "agent" in msg:
-        return (
-            "Agents manage their client portfolio, onboard new customers, issue policies, "
-            "and track commissions from the Agent Portal. Commission is calculated automatically "
-            "whenever a customer they enrolled makes a premium payment."
-        )
-    elif "admin" in msg:
-        return (
-            "Admins oversee the entire system — they can create agent accounts, configure "
-            "policy types, and monitor revenue, reserves, and claim adjudication rates from "
-            "the System Overview dashboard."
-        )
-    elif any(w in msg for w in ("manager", "claim manager", "adjudication", "queue")):
-        return (
-            "Claims Managers review the Adjudication Queue, verify uploaded evidence, "
-            "and approve or reject claims. Approved claims trigger an automatic payout "
-            "deducted from the company reserve."
-        )
-    elif any(w in msg for w in ("role", "privilege", "database", "rbac")):
-        return (
-            "EnsureVault uses Role-Based Access Control at both the application and database "
-            "level. Database roles include dba_admin (full access), data_analyst (read-only), "
-            "and claims_processor (claims and payouts). Application roles are Customer, Agent, "
-            "Claims Manager, and Admin."
-        )
-    return (
-        "I'm specialised in EnsureVault's insurance workflows. "
-        "You can ask me about policies, claims, payments, user roles, or how any part "
-        "of the system works. What would you like to know?"
-    )
-
-
 @router.post("/", response_model=ChatResponse, summary="Query EnsureVault AI Assistant")
 async def chat_with_agent(payload: ChatMessage):
     model = get_model()
     if not model:
-        return ChatResponse(success=True, reply=get_mock_reply(payload.message))
+        raise HTTPException(
+            status_code=503,
+            detail="AI Assistant is currently unavailable (Model Init Failure). Please check API configurations."
+        )
 
     try:
         prompt = f"{SYSTEM_PROMPT}\n\nUser question: {payload.message}"
         response = await model.generate_content_async(prompt)
         return ChatResponse(success=True, reply=response.text)
-    except Exception:
-        return ChatResponse(success=True, reply=get_mock_reply(payload.message))
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"AI Assistant error: {str(e)}")

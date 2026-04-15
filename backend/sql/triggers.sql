@@ -37,11 +37,10 @@ DELIMITER ;
 
 
 -- ============================================================
--- TRIGGER 2: KYC Verification Constraint
+-- TRIGGER 2: KYC Verification Constraint (Policy Purchase)
 -- Fires BEFORE inserting a new policy.
--- Ensures that only customers with kyc_status = 'Verified'
--- are allowed to purchase a policy. Unverified customers
--- are blocked at the database level.
+-- ensures that only customers with kyc_status = 'Verified'
+-- are allowed to purchase a policy.
 -- ============================================================
 DROP TRIGGER IF EXISTS enforce_kyc_before_policy;
 
@@ -57,14 +56,39 @@ BEGIN
     FROM customer
     WHERE customer_id = NEW.customer_id;
 
-    IF customer_kyc_status IS NULL THEN
-        SIGNAL SQLSTATE '45001'
-            SET MESSAGE_TEXT = 'KYC_ERROR: Customer not found.';
-    END IF;
-
     IF customer_kyc_status != 'Verified' THEN
         SIGNAL SQLSTATE '45001'
             SET MESSAGE_TEXT = 'KYC_UNVERIFIED: Customer must complete KYC verification before purchasing a policy.';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+-- ============================================================
+-- TRIGGER 3: KYC Verification Constraint (Claim Submission)
+-- Fires BEFORE inserting a new claim.
+-- Ensures that only customers with kyc_status = 'Verified'
+-- are allowed to file a claim.
+-- ============================================================
+DROP TRIGGER IF EXISTS enforce_kyc_before_claim;
+
+DELIMITER $$
+
+CREATE TRIGGER enforce_kyc_before_claim
+BEFORE INSERT ON claim
+FOR EACH ROW
+BEGIN
+    DECLARE customer_kyc_status ENUM('Verified', 'Pending', 'Rejected');
+
+    SELECT c.kyc_status INTO customer_kyc_status
+    FROM customer c
+    JOIN policy p ON c.customer_id = p.customer_id
+    WHERE p.policy_id = NEW.policy_id;
+
+    IF customer_kyc_status != 'Verified' THEN
+        SIGNAL SQLSTATE '45002'
+            SET MESSAGE_TEXT = 'KYC_UNVERIFIED: Your account must be KYC Verified before you can submit a claim.';
     END IF;
 END$$
 
