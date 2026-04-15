@@ -87,11 +87,21 @@ export default function AdminDashboard() {
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
-            <div>
-                <h1 className="text-4xl font-bold tracking-tight">System Overview</h1>
-                <p className="text-muted-foreground mt-2">
-                    Real-time performance metrics and workforce analytics for EnsureVault.
-                </p>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 className="text-4xl font-bold tracking-tight">System Overview</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Real-time performance metrics and workforce analytics for EnsureVault.
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <Link href="/admin/agents/create" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-medium flex items-center gap-2">
+                        + Add Agent
+                    </Link>
+                    <Link href="/admin/claims-managers/create" className="px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-all font-medium flex items-center gap-2">
+                        + Add Claims Manager
+                    </Link>
+                </div>
             </div>
 
             {/* Main KPI Grid */}
