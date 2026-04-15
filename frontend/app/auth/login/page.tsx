@@ -32,7 +32,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${API}/auth/login`, {
+            const res: Response = await fetch(`${API}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
@@ -40,8 +40,8 @@ export default function LoginPage() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.detail ?? "Invalid credentials.");
 
-            const { name, role, user_id, customer_id } = json.data;
-            login(role, { name, user_id, customer_id });
+            const { name, role, user_id, customer_id, email, kyc_status } = json.data;
+            login(role, { name, user_id, customer_id, email, kyc_status });
 
             if (role === "customer") router.push("/customer/dashboard");
             else if (role === "agent") router.push("/agent/dashboard");

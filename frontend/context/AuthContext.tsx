@@ -9,6 +9,8 @@ export interface AuthUser {
     role: Role;
     user_id: number;
     customer_id?: number;
+    email?: string;
+    kyc_status?: string;
 }
 
 interface AuthContextType {

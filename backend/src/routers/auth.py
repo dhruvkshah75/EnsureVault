@@ -32,7 +32,7 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
 
     # 1. Check if email belongs to a customer
     cursor.execute(
-        "SELECT customer_id AS user_id, full_name AS name FROM customer WHERE email = %s",
+        "SELECT customer_id AS user_id, full_name AS name, email, kyc_status FROM customer WHERE email = %s",
         (body.email,),
     )
     customer = cursor.fetchone()
@@ -46,6 +46,8 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
                 role="customer",
                 user_id=customer["user_id"],
                 customer_id=customer["user_id"],
+                email=customer["email"],
+                kyc_status=customer["kyc_status"],
             ),
         )
 
@@ -64,6 +66,7 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
                     name=agent["name"],
                     role="agent",
                     user_id=agent["user_id"],
+                    email=derived_email,
                 ),
             )
 
@@ -72,7 +75,7 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
         return APIResponse(
             success=True,
             message="Login successful",
-            data=LoginResponse(name="Admin", role="admin", user_id=0),
+            data=LoginResponse(name="Admin", role="admin", user_id=0, email="admin@ensurevault.com"),
         )
 
     # 4. Check for claims manager (hardcoded for demo)
@@ -80,7 +83,7 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
         return APIResponse(
             success=True,
             message="Login successful",
-            data=LoginResponse(name="Claims Manager", role="claims_manager", user_id=0),
+            data=LoginResponse(name="Claims Manager", role="claims_manager", user_id=0, email="manager@ensurevault.com"),
         )
 
     raise HTTPException(status_code=401, detail="No account found with this email address.")

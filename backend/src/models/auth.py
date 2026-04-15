@@ -62,3 +62,11 @@ class LoginResponse(BaseModel):
         None,
         description="Customer ID (only present when role is 'customer')",
     )
+    email: str | None = Field(
+        None,
+        description="User email address",
+    )
+    kyc_status: str | None = Field(
+        None,
+        description="KYC verification status (only for customers)",
+    )
