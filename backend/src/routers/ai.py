@@ -139,7 +139,7 @@ TECHNICAL ARCHITECTURE (for technical questions)
   • CI/CD: GitHub Actions runs Ruff (Python linting), Pytest (backend tests),
     Jest (frontend tests), and Docker build verification on every push.
   • Deployment: Docker Compose orchestrates both frontend and backend containers.
-  • AI: Google Gemini 1.5 Flash for high-concurrency natural language understanding.
+  • AI: Google Gemini 2.0 Flash for high-concurrency natural language understanding.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DEMO ACCOUNTS (for questions about logging in / testing)
@@ -178,7 +178,7 @@ def get_model():
     if settings.GEMINI_API_KEY:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            _model = genai.GenerativeModel('gemini-1.5-flash')
+            _model = genai.GenerativeModel('gemini-2.0-flash')
             return _model
         except Exception as e:
             print(f"AI_INIT_ERROR: Failed to configure Gemini: {e}")
