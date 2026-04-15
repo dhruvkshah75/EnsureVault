@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
     TrendingUp,
     ShieldCheck,
@@ -126,17 +127,21 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Active Policies */}
-                <div className="glass-card p-6 border-l-4 border-l-primary shadow-xl shadow-primary/5 hover:bg-white/5 transition-colors">
-                    <div className="flex justify-between items-start">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <Users className="w-6 h-6 text-primary" />
-                        </div>
-                    </div>
-                    <div className="mt-4">
-                        <p className="text-sm font-medium text-muted-foreground">Active Policies</p>
-                        <p className="text-3xl font-bold">{kpis.active_policies}</p>
-                    </div>
-                </div>
+                <Link href="/admin/policies/active" className="block">
+                  <div className="glass-card p-6 border-l-4 border-l-primary shadow-xl shadow-primary/5 hover:bg-white/5 hover:shadow-xl hover:shadow-primary/10 transition-all cursor-pointer group">
+                      <div className="flex justify-between items-start">
+                          <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                              <Users className="w-6 h-6 text-primary" />
+                          </div>
+                          <ArrowUpRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <div className="mt-4">
+                          <p className="text-sm font-medium text-muted-foreground">Active Policies</p>
+                          <p className="text-3xl font-bold">{kpis.active_policies}</p>
+                          <p className="text-xs text-primary mt-2 group-hover:underline">View all →</p>
+                      </div>
+                  </div>
+                </Link>
 
                 {/* Total Payouts */}
                 <div className="glass-card p-6 border-l-4 border-l-red-500 shadow-xl shadow-red-500/5 hover:bg-white/5 transition-colors">
@@ -243,12 +248,12 @@ export default function AdminDashboard() {
                         <div className="mt-8 pt-6 border-t border-white/10">
                             <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Quick Actions</h4>
                             <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => window.location.href = '/admin/agents/create'} className="p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold hover:bg-primary hover:text-white transition-all">
+                                <Link href="/admin/agents/create" className="p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold hover:bg-primary hover:text-white transition-all text-center">
                                     Add Agent
-                                </button>
-                                <button onClick={() => window.location.href = '/admin/policies/create'} className="p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold hover:bg-secondary hover:text-white transition-all">
-                                    New Policy
-                                </button>
+                                </Link>
+                                <Link href="/admin/claims-managers/create" className="p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold hover:bg-accent hover:text-white transition-all text-center">
+                                    Add Claims Manager
+                                </Link>
                             </div>
                         </div>
                     </div>
