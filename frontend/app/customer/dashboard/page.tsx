@@ -51,6 +51,7 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentPolicyId, setPaymentPolicyId] = useState<number | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
@@ -314,10 +315,10 @@ export default function CustomerDashboard() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-md mx-4 animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-md mx-4 my-8 animate-slide-up">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <CreditCard className="w-5 h-5 text-primary" />
@@ -336,102 +337,140 @@ export default function CustomerDashboard() {
             <div className="p-6 space-y-6">
               {!paymentSuccess ? (
                 <>
+                  {/* Policy Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Select Policy to Pay</label>
+                    <select
+                      value={paymentPolicyId ?? ""}
+                      onChange={(e) => setPaymentPolicyId(parseInt(e.target.value) || null)}
+                      className="form-input"
+                      disabled={paymentProcessing}
+                    >
+                      <option value="">Choose a policy...</option>
+                      {policies.map((p) => (
+                        <option key={p.policy_id} value={p.policy_id}>
+                          {p.type_name} - ₹{p.premium_amount.toLocaleString()} (ID: {p.policy_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Payment Amount */}
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                    <p className="text-sm text-muted-foreground mb-1">Amount Due</p>
-                    <p className="text-3xl font-bold text-primary">₹{(policies.reduce((sum, p) => sum + p.premium_amount, 0)).toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Due Date: 15 Apr 2026</p>
-                  </div>
-
-                  {/* Payment Method */}
-                  <div className="space-y-3">
-                    <label className="block text-sm font-semibold text-foreground">Payment Method</label>
-                    <div className="space-y-2">
-                      <button className="w-full flex items-center gap-3 p-4 border-2 border-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                        <CreditCard className="w-5 h-5 text-primary" />
-                        <div className="text-left flex-1">
-                          <p className="font-semibold text-foreground">Credit/Debit Card</p>
-                          <p className="text-xs text-muted-foreground">Visa, Mastercard, RuPay</p>
-                        </div>
-                      </button>
-                      <button className="w-full flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted transition-colors opacity-50 cursor-not-allowed">
-                        <div className="w-5 h-5 bg-muted-foreground/20 rounded" />
-                        <div className="text-left flex-1">
-                          <p className="font-semibold text-muted-foreground">UPI Payment</p>
-                          <p className="text-xs text-muted-foreground">Coming Soon</p>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Card Details */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-foreground">Card Number</label>
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        className="form-input"
-                        maxLength={19}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-foreground">Expiry Date</label>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          className="form-input"
-                          maxLength={5}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-foreground">CVV</label>
-                        <input
-                          type="password"
-                          placeholder="123"
-                          className="form-input"
-                          maxLength={3}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Security Notice */}
-                  <div className="flex items-start gap-2 p-3 bg-accent/5 border border-accent/20 rounded-lg">
-                    <Lock className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-muted-foreground">
-                      Your payment is secured with 256-bit SSL encryption. We never store your card details.
-                    </p>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowPaymentModal(false)}
-                      className="btn-outline flex-1"
-                      disabled={paymentProcessing}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handlePayment}
-                      disabled={paymentProcessing}
-                      className="btn-primary flex-1 flex items-center justify-center gap-2"
-                    >
-                      {paymentProcessing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4" />
-                          Pay Now
-                        </>
+                  {paymentPolicyId && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                      <p className="text-sm text-muted-foreground mb-1">Amount Due</p>
+                      <p className="text-3xl font-bold text-primary">₹{(policies.find(p => p.policy_id === paymentPolicyId)?.premium_amount || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Due Date: 15 Apr 2026</p>
+                      {new Date() < new Date("2026-04-15") && (
+                        <p className="text-xs text-yellow-600 mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Payment not yet due. Available from 15 Apr 2026.
+                        </p>
                       )}
-                    </button>
-                  </div>
+                    </div>
+                  )}
+
+                  {paymentPolicyId ? (
+                    <>
+                      {/* Payment Method */}
+                      <div className="space-y-3">
+                        <label className="block text-sm font-semibold text-foreground">Payment Method</label>
+                        <div className="space-y-2">
+                          <button className="w-full flex items-center gap-3 p-4 border-2 border-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
+                            <CreditCard className="w-5 h-5 text-primary" />
+                            <div className="text-left flex-1">
+                              <p className="font-semibold text-foreground">Credit/Debit Card</p>
+                              <p className="text-xs text-muted-foreground">Visa, Mastercard, RuPay</p>
+                            </div>
+                          </button>
+                          <button className="w-full flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted transition-colors opacity-50 cursor-not-allowed">
+                            <div className="w-5 h-5 bg-muted-foreground/20 rounded" />
+                            <div className="text-left flex-1">
+                              <p className="font-semibold text-muted-foreground">UPI Payment</p>
+                              <p className="text-xs text-muted-foreground">Coming Soon</p>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Card Details */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-semibold text-foreground">Card Number</label>
+                          <input
+                            type="text"
+                            placeholder="1234 5678 9012 3456"
+                            className="form-input"
+                            maxLength={19}
+                            disabled={paymentProcessing}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-foreground">Expiry Date</label>
+                            <input
+                              type="text"
+                              placeholder="MM/YY"
+                              className="form-input"
+                              maxLength={5}
+                              disabled={paymentProcessing}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-foreground">CVV</label>
+                            <input
+                              type="password"
+                              placeholder="123"
+                              className="form-input"
+                              maxLength={3}
+                              disabled={paymentProcessing}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Security Notice */}
+                      <div className="flex items-start gap-2 p-3 bg-accent/5 border border-accent/20 rounded-lg">
+                        <Lock className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          Your payment is secured with 256-bit SSL encryption. We never store your card details.
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowPaymentModal(false)}
+                          className="btn-outline flex-1"
+                          disabled={paymentProcessing}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handlePayment}
+                          disabled={paymentProcessing || new Date() < new Date("2026-04-15")}
+                          className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={new Date() < new Date("2026-04-15") ? "Payment available from 15 Apr 2026" : ""}
+                        >
+                          {paymentProcessing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4" />
+                              Pay Now
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Please select a policy to proceed</p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8 space-y-4">

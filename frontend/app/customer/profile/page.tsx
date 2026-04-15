@@ -1,26 +1,83 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Mail, ShieldCheck, UploadCloud, CheckCircle2, ShieldAlert, FileText, Loader2, Activity } from "lucide-react";
 import { useToast } from "@/components/Toast";
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export default function ProfilePage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const [uploading, setUploading] = useState(false);
-    const [kycStatus, setKycStatus] = useState<"Unverified" | "Pending" | "Verified">("Unverified");
+    const [kycStatus, setKycStatus] = useState<"Pending" | "Verified" | "Rejected">("Pending");
+    const [loading, setLoading] = useState(true);
 
-    const handleUpload = () => {
+    useEffect(() => {
+        if (!user?.customer_id) return;
+
+        const fetchKycStatus = async () => {
+            try {
+                const res = await fetch(`${API}/policies/?customer_id=${user.customer_id}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    // Get customer info from policies endpoint (includes customer data)
+                    // For now, we'll just set it based on user data
+                    setKycStatus(user.kyc_status || "Pending");
+                } else {
+                    setKycStatus(user.kyc_status || "Pending");
+                }
+            } catch (e) {
+                setKycStatus(user.kyc_status || "Pending");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchKycStatus();
+    }, [user]);
+
+    const handleUpload = async () => {
+        if (!user?.customer_id) {
+            toast("Customer ID not found", "error");
+            return;
+        }
+
         setUploading(true);
-        setTimeout(() => {
+        try {
+            // Simulated upload - in production, would use real file upload
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Update KYC status in backend
+            const res = await fetch(`${API}/customers/${user.customer_id}/kyc-upload`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "Pending" })
+            });
+
+            if (res.ok) {
+                setKycStatus("Pending");
+                toast("KYC documents uploaded successfully. Verification in progress.", "success");
+            } else {
+                toast("Failed to upload documents", "error");
+            }
+        } catch (e) {
+            toast("Upload failed", "error");
+        } finally {
             setUploading(false);
-            setKycStatus("Pending");
-            toast("KYC documents uploaded successfully. Verification in progress.", "success");
-        }, 2000);
+        }
     };
 
     if (!user) return null;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-40 gap-3 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading profile...</span>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-slide-up">
@@ -53,7 +110,7 @@ export default function ProfilePage() {
                         <div className="w-full space-y-4 text-left">
                             <div className="flex items-center gap-3 text-sm">
                                 <Mail className="w-4 h-4 text-primary" />
-                                <span className="truncate">amit.patel@email.com</span>
+                                <span className="truncate">{user.email || "Not available"}</span>
                             </div>
                             <div className="flex items-center gap-3 text-sm">
                                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -144,9 +201,15 @@ export default function ProfilePage() {
                                 </div>
                             ) : kycStatus === "Pending" ? (
                                 <div className="space-y-4">
-                                    <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-                                    <p className="font-medium">Documents received!</p>
+                                    <Loader2 className="w-12 h-12 text-yellow-500 mx-auto animate-spin" />
+                                    <p className="font-medium">Documents under review</p>
                                     <p className="text-sm text-muted-foreground">Our compliance team is reviewing your files (est. 24-48h).</p>
+                                </div>
+                            ) : kycStatus === "Verified" ? (
+                                <div className="space-y-4">
+                                    <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
+                                    <p className="font-medium">Verification Complete!</p>
+                                    <p className="text-sm text-muted-foreground">Your identity has been verified.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -159,7 +222,8 @@ export default function ProfilePage() {
                                     </div>
                                     <button
                                         onClick={handleUpload}
-                                        className="mt-4 px-6 py-2 bg-secondary text-secondary-foreground rounded-full font-bold shadow-lg shadow-secondary/20 hover:opacity-90 transition-all"
+                                        disabled={uploading}
+                                        className="mt-4 px-6 py-2 bg-secondary text-secondary-foreground rounded-full font-bold shadow-lg shadow-secondary/20 hover:opacity-90 transition-all disabled:opacity-50"
                                     >
                                         Select Files
                                     </button>
