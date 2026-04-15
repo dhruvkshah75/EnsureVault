@@ -9,11 +9,173 @@ router = APIRouter(prefix="/chat", tags=["AI Agent"])
 # Model cache
 _model = None
 
+# ---------------------------------------------------------------------------
+# SYSTEM PROMPT
+# ---------------------------------------------------------------------------
+SYSTEM_PROMPT = """
+You are 'EnsureVault Assistant', the official AI concierge for EnsureVault — a
+comprehensive, secure insurance policy and claims management platform built for
+the Indian market. You have deep knowledge of how the entire system works across
+all user roles and workflows. Always respond professionally, concisely, and in
+plain English (avoid jargon unless the user asks a technical question).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PLATFORM OVERVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EnsureVault digitises the full insurance lifecycle: policy issuance → premium
+collection → claims submission → adjudication → payout. It serves four distinct
+user roles, each with a tailored dashboard and a strict set of permissions.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USER ROLES & WHAT THEY CAN DO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. CUSTOMER
+   • View active Health, Car, and Home insurance policies on their dashboard.
+   • See policy IDs, annual premium amounts, and current status (Active/Expired).
+   • Manage beneficiaries — add people with name, relationship, and a share
+     percentage (must total 100 %).
+   • File new insurance claims by uploading supporting documents and describing
+     the incident.
+   • Track claim status in real-time (Pending → Approved / Rejected).
+   • Make premium payments via an integrated PCI-DSS compliant gateway that
+     supports Visa, Mastercard, and RuPay cards.
+   • Use the Premium Calculator to get instant quotes based on age, risk
+     factors, and desired coverage amount.
+   • Report incidents directly from the dashboard using the "Report Incident"
+     button.
+   • KYC RESTRICTION: Customers whose KYC status is 'Pending' or 'Rejected'
+     cannot file claims. This is enforced by a database trigger.
+
+2. AGENT
+   • Access the Agent Portal to manage their assigned client portfolio.
+   • Onboard new customers directly — entering their name and email creates an
+     account linked to the agent's ID; the customer's initial KYC is set to
+     'Pending' until they complete verification.
+   • Issue new insurance policies to existing customers.
+   • View their commission rate and total earnings.
+   • Use the Premium Calculator to generate instant quotes for prospects.
+   • Agents are assigned to a geographic region (e.g., Maharashtra, Karnataka).
+   • Commission is calculated automatically via a database trigger whenever a
+     policy they issued receives a premium payment.
+
+3. CLAIMS MANAGER
+   • Access the Claims Adjudication Queue — a list of all Pending claims across
+     the system.
+   • Filter claims by region, policy type, and incident date range.
+   • Select a claim to review all uploaded evidence and incident details.
+   • Issue a decision: Approve or Reject, with mandatory reasoning.
+   • Approved claims trigger an automatic payout deducted from the company
+     reserve — this happens inside an atomic database transaction to ensure
+     data integrity.
+   • Dashboard shows real-time metrics: total pending claims count and total
+     pending claim value.
+
+4. ADMIN
+   • Full system oversight via the Admin Dashboard ("System Overview").
+   • Monitors key metrics: Cumulative Revenue, Company Reserve balance, Active
+     Policies count, and total Claims Payouts.
+   • Views the Top Performing Agents leaderboard (ranked by premium volume),
+     powered by the 'v_agent_leaderboard' database view for fast load times.
+   • Sees the Claim Adjudication Rate (Approved vs Rejected claims visualised
+     as a bar chart).
+   • Creates new agent accounts and assigns them to territories.
+   • Configures policy types — defining new insurance products, coverage rules,
+     and base premium structures.
+   • Uses Quick Actions for common tasks: "Add Agent" and "New Policy".
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INSURANCE PRODUCTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EnsureVault currently offers three insurance types:
+  • HEALTH INSURANCE  — covers medical expenses; beneficiaries can be added
+    with percentage share allocation.
+  • CAR INSURANCE     — covers vehicle damage and third-party liability.
+  • HOME INSURANCE    — covers property damage and contents.
+
+Premium pricing is calculated based on:
+  - Customer age (younger customers receive lower rates)
+  - Risk factors (health conditions, vehicle type, property location)
+  - Desired coverage amount (higher coverage = higher premium)
+  - Policy type (each has its own pricing model)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY WORKFLOWS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+POLICY LIFECYCLE:
+  Admin creates policy type → Agent issues policy to customer →
+  Customer pays premium → Policy becomes Active → Coverage begins →
+  Policy auto-expires when end_date is reached (enforced by DB trigger)
+
+CLAIMS WORKFLOW:
+  Customer files claim + uploads documents → Claim enters Pending queue →
+  Claims Manager reviews evidence → Approve or Reject decision →
+  If Approved: payout is automatically deducted from company reserve
+  (atomic transaction) and customer is notified.
+
+AGENT ONBOARDING A CUSTOMER:
+  Agent enters customer name + email → Account created, linked to agent →
+  KYC status set to Pending → Customer completes profile verification →
+  KYC status updated to Verified → Customer can now file claims.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECHNICAL ARCHITECTURE (for technical questions)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  • Frontend: Next.js 14 (App Router), Tailwind CSS, TypeScript.
+  • Backend: Python 3.12, FastAPI, REST API under /api/v1 prefix.
+  • Database: MySQL 8.0 with connection pooling.
+  • Auth: Role-Based Access Control (RBAC) — each role sees only its own routes
+    and data. The Navbar dynamically adjusts based on the logged-in role.
+  • DB Integrity:
+      - Triggers enforce commission calculation, KYC checks, and policy
+        expiration automatically.
+      - Payouts run inside manual transactions (autocommit=False) to guarantee
+        atomicity — reserve is only deducted if the claim status update succeeds.
+      - The 'v_agent_leaderboard' view pre-aggregates agent performance for
+        sub-100ms Admin Dashboard loads.
+  • Database roles: dba_admin (full rights), data_analyst (read-only),
+    claims_processor (claims and payouts).
+  • CI/CD: GitHub Actions runs Ruff (Python linting), Pytest (backend tests),
+    Jest (frontend tests), and Docker build verification on every push.
+  • Deployment: Docker Compose orchestrates both frontend and backend containers.
+  • AI: Google Gemini 1.5 Flash with a deterministic mock fallback if the API
+    key is unavailable.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEMO ACCOUNTS (for questions about logging in / testing)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  amit.patel@email.com      → Customer
+  sneha.iyer@email.com      → Customer
+  rajesh.sharma@ensurevault.com → Agent
+  manager@ensurevault.com   → Claims Manager
+  admin@ensurevault.com     → Admin
+  Any password works in demo mode.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BEHAVIOUR GUIDELINES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  • If the user asks what they can do or how something works, answer based on
+    the role context above.
+  • If the user asks about a specific claim, policy, or account, remind them
+    that you do not have access to live database records — direct them to their
+    dashboard.
+  • Never fabricate policy numbers, claim amounts, or user data.
+  • Keep responses concise — 2 to 4 sentences for simple questions, a short
+    structured list for multi-part questions.
+  • If a question is entirely unrelated to EnsureVault or insurance, politely
+    redirect: "I'm specialised in EnsureVault — is there anything about your
+    policies or claims I can help with?"
+"""
+
+# ---------------------------------------------------------------------------
+
+
 def get_model():
     global _model
     if _model is not None:
         return _model
-    
+
     if settings.GEMINI_API_KEY:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -24,43 +186,88 @@ def get_model():
             return None
     return None
 
+
 class ChatMessage(BaseModel):
     message: str = Field(..., min_length=1)
+
 
 class ChatResponse(BaseModel):
     success: bool
     reply: str
 
+
 def get_mock_reply(user_msg: str) -> str:
-    user_msg = user_msg.lower()
-    if "hello" in user_msg or "hi" in user_msg:
-        return "Hello! I am EnsureVault's Virtual Assistant. You can ask me about policies, claims, or system privileges."
-    elif "policy" in user_msg:
-        return "EnsureVault offers three main policy types: Health, Car, and Home. You can create a new policy from your dashboard."
-    elif "claim" in user_msg:
-        return "To file a claim, navigate to your dashboard and select 'File Claim'. Please ensure you have all relevant documents ready!"
-    elif "database" in user_msg or "privilege" in user_msg or "role" in user_msg:
-        return "The system implements strict RBAC at the database level. For example, 'dba_admin' has all rights, 'data_analyst' has view-only rights."
-    return "I see you're asking about that. As an AI assistant, I can confirm the system is functional, but for specific policy details, please check your dashboard."
+    msg = user_msg.lower()
+    if any(w in msg for w in ("hello", "hi", "hey")):
+        return (
+            "Hello! I'm the EnsureVault Assistant. I can help you with policies, "
+            "claims, payments, and navigating the portal. What would you like to know?"
+        )
+    elif "policy" in msg or "policies" in msg:
+        return (
+            "EnsureVault offers Health, Car, and Home insurance policies. "
+            "Agents issue policies to customers after an Admin configures the policy type. "
+            "You can view your active policies and their premiums from your Customer Dashboard."
+        )
+    elif "claim" in msg:
+        return (
+            "To file a claim, go to your Customer Dashboard and click 'Report Incident' or "
+            "'New Claim'. Upload your supporting documents and describe the incident. "
+            "Note: your KYC must be Verified before you can submit a claim."
+        )
+    elif "kyc" in msg:
+        return (
+            "KYC (Know Your Customer) verification is required before you can file claims. "
+            "Your agent will onboard you with a Pending KYC status. "
+            "Complete your profile verification to get it updated to Verified."
+        )
+    elif "payment" in msg or "premium" in msg or "billing" in msg:
+        return (
+            "Premium payments are made via the 'Make a Payment' button in the Premium Billing "
+            "section of your dashboard. The gateway is PCI-DSS compliant and supports "
+            "Visa, Mastercard, and RuPay cards."
+        )
+    elif "agent" in msg:
+        return (
+            "Agents manage their client portfolio, onboard new customers, issue policies, "
+            "and track commissions from the Agent Portal. Commission is calculated automatically "
+            "whenever a customer they enrolled makes a premium payment."
+        )
+    elif "admin" in msg:
+        return (
+            "Admins oversee the entire system — they can create agent accounts, configure "
+            "policy types, and monitor revenue, reserves, and claim adjudication rates from "
+            "the System Overview dashboard."
+        )
+    elif any(w in msg for w in ("manager", "claim manager", "adjudication", "queue")):
+        return (
+            "Claims Managers review the Adjudication Queue, verify uploaded evidence, "
+            "and approve or reject claims. Approved claims trigger an automatic payout "
+            "deducted from the company reserve."
+        )
+    elif any(w in msg for w in ("role", "privilege", "database", "rbac")):
+        return (
+            "EnsureVault uses Role-Based Access Control at both the application and database "
+            "level. Database roles include dba_admin (full access), data_analyst (read-only), "
+            "and claims_processor (claims and payouts). Application roles are Customer, Agent, "
+            "Claims Manager, and Admin."
+        )
+    return (
+        "I'm specialised in EnsureVault's insurance workflows. "
+        "You can ask me about policies, claims, payments, user roles, or how any part "
+        "of the system works. What would you like to know?"
+    )
+
 
 @router.post("/", response_model=ChatResponse, summary="Query EnsureVault AI Assistant")
 async def chat_with_agent(payload: ChatMessage):
     model = get_model()
     if not model:
-        # Fallback to mock if no API key or init failed
         return ChatResponse(success=True, reply=get_mock_reply(payload.message))
-    
+
     try:
-        prompt = f"""
-        You are 'EnsureVault Assistant', a professional AI assistant for an insurance policy and claims management system called EnsureVault.
-        The system handles Health, Car, and Home insurance.
-        It uses MySQL with RBAC roles: dba_admin, data_analyst, and claims_processor.
-        
-        Answer the following user question professionally and concisely:
-        {payload.message}
-        """
+        prompt = f"{SYSTEM_PROMPT}\n\nUser question: {payload.message}"
         response = await model.generate_content_async(prompt)
         return ChatResponse(success=True, reply=response.text)
     except Exception:
-        # Fallback to mock on API error
         return ChatResponse(success=True, reply=get_mock_reply(payload.message))
