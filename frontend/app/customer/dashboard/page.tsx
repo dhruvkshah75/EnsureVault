@@ -252,17 +252,20 @@ export default function CustomerDashboard() {
 
           {/* Nominees Section */}
           <div className="glass-card p-6 border-l-4 border-l-purple-500">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2.5 bg-purple-500/10 rounded-lg">
-                <Users className="w-6 h-6 text-purple-500" />
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-500/10 rounded-lg">
+                  <Users className="w-6 h-6 text-purple-500" />
+                </div>
+                <h2 className="text-xl font-bold">Beneficiaries</h2>
               </div>
-              <h2 className="text-xl font-bold">Beneficiaries</h2>
+              <Link href="/customer/beneficiaries" className="text-sm font-medium text-purple-600 hover:underline">Manage</Link>
             </div>
 
             <div className="space-y-4">
               {nominees.length === 0 ? (
                 <p className="text-muted-foreground text-xs text-center py-10 border border-dashed border-border rounded-xl">
-                  No nominees assigned.
+                  No beneficiaries assigned.
                 </p>
               ) : (
                 nominees.map((n) => (

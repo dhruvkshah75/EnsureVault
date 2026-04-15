@@ -97,6 +97,15 @@ class NomineeResponse(BaseModel):
     )
 
 
+class NomineeCreate(BaseModel):
+    """Request body for adding a nominee to a policy."""
+
+    policy_id: int = Field(..., gt=0, description="Policy ID to add nominee to")
+    nominee_name: str = Field(..., min_length=1, max_length=150, description="Nominee's full name")
+    relation: str = Field(..., min_length=1, max_length=50, description="Relation to policyholder")
+    share_percent: float = Field(..., gt=0, le=100, description="Payout share percentage (1-100)")
+
+
 class PolicyDetailResponse(BaseModel):
     """Full policy view including associated nominees."""
 

@@ -7,6 +7,7 @@ from src.database import get_db
 from src.models.common import APIResponse, ErrorResponse
 from src.models.policy import (
     NomineeResponse,
+    NomineeCreate,
     PolicyCreate,
     PolicyDetailResponse,
     PolicyResponse,
@@ -282,4 +283,118 @@ def list_customer_nominees(
         success=True,
         message=f"Found {len(rows)} nominees",
         data=rows
+    )
+
+
+@router.post(
+    "/nominees/",
+    response_model=APIResponse,
+    status_code=201,
+    summary="Add a nominee to a policy",
+    description="Add a beneficiary (nominee) to an existing policy with specified share percentage.",
+    responses={
+        201: {"description": "Nominee added successfully", "model": APIResponse},
+        400: {"description": "Validation error or shares exceed 100%", "model": ErrorResponse},
+        404: {"description": "Policy not found", "model": ErrorResponse},
+    },
+)
+def add_nominee(
+    body: NomineeCreate,
+    db: MySQLConnection = Depends(get_db),
+):
+    """Add a nominee to a policy."""
+    cursor = db.cursor(dictionary=True)
+
+    # Verify policy exists
+    cursor.execute("SELECT policy_id, customer_id FROM policy WHERE policy_id = %s", (body.policy_id,))
+    policy = cursor.fetchone()
+    if not policy:
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Policy {body.policy_id} not found")
+
+    # Check total share percentage doesn't exceed 100%
+    cursor.execute(
+        "SELECT COALESCE(SUM(share_percent), 0) as total_share FROM nominee WHERE policy_id = %s",
+        (body.policy_id,),
+    )
+    result = cursor.fetchone()
+    total_share = float(result["total_share"]) if result else 0
+    
+    if total_share + body.share_percent > 100:
+        cursor.close()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Total share would exceed 100%. Current: {total_share}%, Adding: {body.share_percent}%"
+        )
+
+    try:
+        # Add the nominee
+        cursor.execute(
+            """
+            INSERT INTO nominee (policy_id, nominee_name, relation, share_percent)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (body.policy_id, body.nominee_name, body.relation, body.share_percent),
+        )
+        db.commit()
+        nominee_id = cursor.lastrowid
+
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    cursor.close()
+
+    return APIResponse(
+        success=True,
+        message="Nominee added successfully",
+        data={
+            "nom_id": nominee_id,
+            "policy_id": body.policy_id,
+            "nominee_name": body.nominee_name,
+            "relation": body.relation,
+            "share_percent": body.share_percent,
+        },
+    )
+
+
+@router.delete(
+    "/nominees/{nom_id}",
+    response_model=APIResponse,
+    summary="Delete a nominee from a policy",
+    description="Remove a beneficiary from a policy.",
+    responses={
+        200: {"description": "Nominee deleted successfully", "model": APIResponse},
+        404: {"description": "Nominee not found", "model": ErrorResponse},
+    },
+)
+def delete_nominee(
+    nom_id: int,
+    db: MySQLConnection = Depends(get_db),
+):
+    """Delete a nominee."""
+    cursor = db.cursor()
+
+    # Verify nominee exists
+    cursor.execute("SELECT nom_id FROM nominee WHERE nom_id = %s", (nom_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        raise HTTPException(status_code=404, detail=f"Nominee {nom_id} not found")
+
+    try:
+        # Delete the nominee
+        cursor.execute("DELETE FROM nominee WHERE nom_id = %s", (nom_id,))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    cursor.close()
+
+    return APIResponse(
+        success=True,
+        message="Nominee deleted successfully",
+        data={"nom_id": nom_id},
     )
