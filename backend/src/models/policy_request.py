@@ -16,6 +16,9 @@ class PolicyRequestStatus(str, Enum):
 class PolicyRequestCreate(BaseModel):
     """Request body for creating a new policy request."""
 
+    customer_id: int = Field(
+        ..., gt=0, description="ID of the customer requesting the policy", examples=[1]
+    )
     type_id: int = Field(
         ..., gt=0, description="ID of the policy type (Health / Car / Home)", examples=[1]
     )
@@ -37,6 +40,7 @@ class PolicyRequestCreate(BaseModel):
         json_schema_extra = {
             "examples": [
                 {
+                    "customer_id": 1,
                     "type_id": 1,
                     "start_date": "2026-04-15",
                     "end_date": "2027-04-15",

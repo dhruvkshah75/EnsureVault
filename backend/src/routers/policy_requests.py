@@ -45,9 +45,8 @@ def request_policy(
 
     cursor = db.cursor(dictionary=True)
 
-    # For now, we'll use customer_id = 1 as placeholder
-    # In production, this would come from authenticated JWT token
-    customer_id = 1  # TODO: Extract from JWT token context
+    # Use customer_id from request body
+    customer_id = body.customer_id
 
     # Verify customer exists
     cursor.execute("SELECT customer_id, agent_id, kyc_status FROM customer WHERE customer_id = %s", (customer_id,))

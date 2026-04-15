@@ -76,12 +76,18 @@ export default function RequestPolicyPage() {
       return;
     }
 
+    if (!user || !user.customer_id) {
+      toast("Customer information not found. Please log in again.", "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`${API}/policies/requests/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          customer_id: user.customer_id,
           type_id: selectedType,
           start_date: startDate,
           end_date: endDate,
