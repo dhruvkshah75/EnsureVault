@@ -289,3 +289,90 @@ If you need to:
 
 **Application Status: FULLY OPERATIONAL** 🚀
 
+
+---
+
+## 🆕 Latest Updates (Session 2)
+
+### Admin Enhancements ✨
+- **Active Policies View**: Admin dashboard "Active Policies" card now clickable → shows all active policies in searchable/filterable table
+- **Claims Manager Creation**: Admin can create claims managers (like agents) from new page at `/admin/claims-managers/create`
+- **Dashboard Updates**: Added "Add Claims Manager" button to quick actions panel
+
+### Policy Management Pages ✨
+- **Customer Policy List**: `/customer/policies` - Shows all customer policies in card grid
+- **Policy Details**: `/customer/policies/[id]` - Full policy information with agent contact and coverage progress
+- **Admin Active Policies**: `/admin/policies/active` - Table view with search/filter and expiration status
+
+### Policy Request Workflow ✨
+- **Customer Request Form**: `/customer/policies/request` - Customers can request policies with dates and type
+- **Agent Approval Interface**: Agents see pending requests on dashboard with approve/reject buttons
+- **Real-time Updates**: Requests convert to active policies upon approval
+
+---
+
+## 📈 Complete Feature Set
+
+### Customer Features ✅
+- Browse active policies
+- View policy details
+- Request new policies
+- Track request status
+- See agent contact info
+- View coverage progress
+
+### Agent Features ✅
+- Onboard customers
+- View customer portfolio
+- See pending policy requests
+- Approve requests (creates policy)
+- Reject requests (with reason)
+- Track commissions
+- View region statistics
+
+### Admin Features ✅
+- Dashboard with KPIs
+- View all active policies (searchable/filterable)
+- Create agents
+- Create claims managers
+- Top performing agents leaderboard
+- Claims adjudication stats
+- Company reserve tracking
+
+---
+
+## 🧪 Recent Testing
+
+```
+✓ Customer requests policy → Request ID 5 created
+✓ Agent sees 2 pending requests on dashboard
+✓ Agent approves request → Policy ID 12 created automatically
+✓ Customer can view new policy immediately
+✓ Admin sees 12 active policies on dashboard
+✓ Admin can filter by insurance type
+✓ Admin can search by customer/agent name
+✓ Claims manager creation works end-to-end
+```
+
+---
+
+## 🌐 Quick Access URLs
+
+**Customer:**
+- Dashboard: http://localhost:3000/customer/dashboard
+- All Policies: http://localhost:3000/customer/policies
+- Policy Detail: http://localhost:3000/customer/policies/1
+- Request Policy: http://localhost:3000/customer/policies/request
+
+**Agent:**
+- Dashboard: http://localhost:3000/agent/dashboard
+- View pending requests (on dashboard)
+
+**Admin:**
+- Dashboard: http://localhost:3000/admin/dashboard
+- Active Policies: http://localhost:3000/admin/policies/active
+- Create Agent: http://localhost:3000/admin/agents/create
+- Create Claims Manager: http://localhost:3000/admin/claims-managers/create
+
+---
+
