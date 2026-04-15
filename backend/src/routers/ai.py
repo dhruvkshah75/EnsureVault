@@ -178,7 +178,7 @@ def get_model():
     if settings.GEMINI_API_KEY:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            _model = genai.GenerativeModel('gemini-2.0-flash')
+            _model = genai.GenerativeModel('google/gemma-3-27b-it')
             return _model
         except Exception as e:
             print(f"AI_INIT_ERROR: Failed to configure Gemini: {e}")
