@@ -178,10 +178,15 @@ def get_model():
     if settings.GEMINI_API_KEY:
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            _model = genai.GenerativeModel('google/gemma-3-27b-it')
+            # Try gemini-2.0-flash (a verified working model)
+            print(f"DEBUG: Attempting to load model 'gemini-2.0-flash'")
+            _model = genai.GenerativeModel('gemini-2.0-flash')
+            print(f"DEBUG: Model loaded successfully")
             return _model
         except Exception as e:
-            print(f"AI_INIT_ERROR: Failed to configure Gemini: {e}")
+            print(f"AI_INIT_ERROR: Failed to configure Gemini: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     return None
 
@@ -210,6 +215,10 @@ async def chat_with_agent(payload: ChatMessage):
         return ChatResponse(success=True, reply=response.text)
     except Exception as e:
         error_msg = str(e)
+        print(f"CHAT_ERROR: {type(e).__name__}: {error_msg[:300]}")
+        import traceback
+        traceback.print_exc()
+        
         if "429" in error_msg or "quota" in error_msg.lower():
             # Fallback demo response when quota is exceeded
             user_question = payload.message.lower()
