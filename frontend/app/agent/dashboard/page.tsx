@@ -113,13 +113,13 @@ export default function AgentDashboard() {
 
     const handleReject = async (requestId: number) => {
         if (!user) return;
-        const reason = rejectionReason[requestId] || "No reason provided";
+        const rejectionReason_ = rejectionReason[requestId] || "No reason provided";
         setRejecting(requestId);
         try {
             const res = await fetch(`${API}/policies/requests/${requestId}/reject`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reviewed_by: user.user_id, reason })
+                body: JSON.stringify({ reviewed_by: user.user_id, rejection_reason: rejectionReason_ })
             });
 
             if (!res.ok) throw new Error("Failed to reject");
@@ -286,6 +286,7 @@ export default function AgentDashboard() {
                                                 ) : (
                                                     <XCircle className="w-4 h-4" />
                                                 )}
+                                                {rejecting === req.request_id ? "Rejecting..." : "Reject"}
                                             </button>
                                             <button
                                                 onClick={() => setShowRejectForm(null)}

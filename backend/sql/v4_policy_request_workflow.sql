@@ -143,6 +143,8 @@ BEGIN
     DECLARE p_end_date DATE;
     DECLARE p_premium_amount DECIMAL(12,2);
     DECLARE new_policy_id INT;
+    DECLARE v_commission_rate DECIMAL(5,2);
+    DECLARE v_commission_amount DECIMAL(12,2);
     
     START TRANSACTION;
     
@@ -160,6 +162,10 @@ BEGIN
     -- If premium not set, calculate it
     IF p_premium_amount IS NULL THEN
         CALL calculate_premium(p_customer_id, p_type_id);
+        -- Re-fetch premium after calculation
+        SELECT premium_amount INTO p_premium_amount
+        FROM policy_request
+        WHERE request_id = p_request_id;
     END IF;
     
     -- Create the actual policy
@@ -168,6 +174,15 @@ BEGIN
     
     SET new_policy_id = LAST_INSERT_ID();
     
+    -- Calculate and record commission immediately on approval
+    SELECT commission_rate INTO v_commission_rate FROM agent WHERE agent_id = p_agent_id;
+    SET v_commission_amount = COALESCE(p_premium_amount, 0) * (v_commission_rate / 100);
+    
+    IF v_commission_amount > 0 THEN
+        INSERT INTO commission_ledger (agent_id, policy_id, amount)
+        VALUES (p_agent_id, new_policy_id, v_commission_amount);
+    END IF;
+    
     -- Update request status to Approved
     UPDATE policy_request
     SET status = 'Approved', reviewed_at = NOW(), reviewed_by = p_reviewed_by
@@ -175,7 +190,7 @@ BEGIN
     
     -- Log the action
     INSERT INTO policy_request_log (request_id, action, performed_by, notes)
-    VALUES (p_request_id, 'Approved', p_reviewed_by, CONCAT('Policy created: ', new_policy_id));
+    VALUES (p_request_id, 'Approved', p_reviewed_by, CONCAT('Policy created: ', new_policy_id, ', Commission: ', v_commission_amount));
     
     COMMIT;
     
