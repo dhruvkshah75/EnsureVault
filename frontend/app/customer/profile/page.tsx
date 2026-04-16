@@ -24,12 +24,15 @@ export default function ProfilePage() {
                     const json = await res.json();
                     // Get customer info from policies endpoint (includes customer data)
                     // For now, we'll just set it based on user data
-                    setKycStatus(user.kyc_status || "Pending");
+                    const status = (user.kyc_status || "Pending") as "Pending" | "Verified" | "Rejected";
+                    setKycStatus(status);
                 } else {
-                    setKycStatus(user.kyc_status || "Pending");
+                    const status = (user.kyc_status || "Pending") as "Pending" | "Verified" | "Rejected";
+                    setKycStatus(status);
                 }
             } catch (e) {
-                setKycStatus(user.kyc_status || "Pending");
+                const status = (user.kyc_status || "Pending") as "Pending" | "Verified" | "Rejected";
+                setKycStatus(status);
             } finally {
                 setLoading(false);
             }
