@@ -17,6 +17,20 @@ class RiskLevel(str, Enum):
     HIGH = "HIGH"
 
 
+class ClaimCreate(BaseModel):
+    policy_id: int = Field(..., gt=0)
+    incident_date: date
+    claim_amount: float = Field(..., gt=0)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"policy_id": 1, "incident_date": "2026-03-31", "claim_amount": 15000.00}
+            ]
+        }
+    }
+
+
 class ClaimDecisionRequest(BaseModel):
     status: ClaimStatus = Field(..., description="Must be 'Approved' or 'Rejected'")
     rejection_reason: Optional[str] = Field(

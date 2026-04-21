@@ -7,7 +7,7 @@ Please read your section carefully, understand your role, and use the provided d
 ---
 
 ## 1. Pranav Lorekar (Database Administrator & Triggers Specialist)
-**Priority: High (Blocking Backend)**
+**Priority: High (Blocking Backend)** - ✅ **[COMPLETED]**
 
 **Current State:** The foundational schema (tables, foreign keys) and seed data are successfully merged and running in our Dockerized MySQL container. 
 **Goal:** We need strict database-level business rules enforced via Triggers before the backend begins pumping in real, high-volume data.
@@ -23,7 +23,7 @@ Please read your section carefully, understand your role, and use the provided d
 ---
 
 ## 2. Aaditya Lahori (Backend Transactions & Finance)
-**Priority: High (Blocking Frontend Finance UI)**
+**Priority: High (Blocking Frontend Finance UI)** - ✅ **[COMPLETED]**
 
 **Current State:** Aayush has completed the core Risk Assessment and Premium Stored Procedures. However, the final execution of claim payouts and premium payments requires strict ACID properties.
 **Goal:** Build the FastAPI endpoints for Payouts and Payments using robust SQL transaction blocks (`START TRANSACTION`, `COMMIT`, `ROLLBACK`).

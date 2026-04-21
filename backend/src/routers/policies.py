@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from mysql.connector import MySQLConnection
-from typing import Optional
+from typing import Optional, List
 from src.database import get_db
 from src.models.policy import (
     PolicyCreate,
@@ -15,7 +15,12 @@ from src.utils.validators import validate_date_range
 router = APIRouter(prefix="/policies", tags=["Policies"])
 
 
-@router.get("/", response_model=APIResponse)
+@router.get(
+    "/",
+    response_model=APIResponse[List[PolicyResponse]],
+    summary="List Policies",
+    description="List active and historical policies with optional filtering by customer, agent, status, and policy type. Accessible by Agent and Admin."
+)
 def list_policies(
     customer_id: Optional[int] = Query(None, description="Filter by customer"),
     agent_id: Optional[int] = Query(None, description="Filter by agent"),
@@ -23,7 +28,6 @@ def list_policies(
     type_id: Optional[int] = Query(None, description="Filter by policy type"),
     db: MySQLConnection = Depends(get_db),
 ):
-    """List policies with optional filters. (Agent, Admin)"""
     query = """
         SELECT
             p.policy_id, p.customer_id, c.full_name AS customer_name,
@@ -64,9 +68,13 @@ def list_policies(
     )
 
 
-@router.get("/{policy_id}", response_model=APIResponse)
+@router.get(
+    "/{policy_id}",
+    response_model=APIResponse[PolicyDetailResponse],
+    summary="Get Policy Details",
+    description="Get specific details of a policy, including all linked nominees."
+)
 def get_policy(policy_id: int, db: MySQLConnection = Depends(get_db)):
-    """Get a policy with its nominees."""
     cursor = db.cursor(dictionary=True)
 
     cursor.execute(
@@ -106,12 +114,17 @@ def get_policy(policy_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.post("/", response_model=APIResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=APIResponse[dict],
+    status_code=201,
+    summary="Create Policy",
+    description="Create a new policy for a verified customer. The premium amount will be auto-calculated if not explicitly provided. Restricted to Agent."
+)
 def create_policy(
     body: PolicyCreate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Create a new policy. Premium is auto-calculated if not provided. (Agent)"""
     validate_date_range(body.start_date, body.end_date)
 
     cursor = db.cursor(dictionary=True)
@@ -166,13 +179,17 @@ def create_policy(
     )
 
 
-@router.put("/{policy_id}/status", response_model=APIResponse)
+@router.put(
+    "/{policy_id}/status",
+    response_model=APIResponse,
+    summary="Update Policy Status",
+    description="Change the status of an existing policy (e.g., to Active, Cancelled, Expired). Restricted to Admin."
+)
 def update_policy_status(
     policy_id: int,
     body: PolicyStatusUpdate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Change the status of a policy (activate, cancel, expire). (Admin)"""
     cursor = db.cursor()
     try:
         cursor.execute(

@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from mysql.connector import MySQLConnection
 from src.database import get_db
@@ -11,9 +12,13 @@ from src.models.common import APIResponse
 router = APIRouter(prefix="/policy-types", tags=["Policy Types"])
 
 
-@router.get("/", response_model=APIResponse)
+@router.get(
+    "/",
+    response_model=APIResponse[List[PolicyTypeResponse]],
+    summary="List All Policy Types",
+    description="List all available insurance plan types (e.g., Health, Car, Home) configured in the system."
+)
 def list_policy_types(db: MySQLConnection = Depends(get_db)):
-    """List all available insurance plan types (Health, Car, Home)."""
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM policy_type ORDER BY type_id")
     rows = cursor.fetchall()
@@ -25,9 +30,13 @@ def list_policy_types(db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.get("/{type_id}", response_model=APIResponse)
+@router.get(
+    "/{type_id}",
+    response_model=APIResponse[PolicyTypeResponse],
+    summary="Get Specific Policy Type",
+    description="Get specific details of an insurance plan type by its unique `type_id`."
+)
 def get_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
-    """Get a specific insurance plan type by ID."""
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT * FROM policy_type WHERE type_id = %s", (type_id,))
     row = cursor.fetchone()
@@ -43,12 +52,17 @@ def get_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
     )
 
 
-@router.post("/", response_model=APIResponse, status_code=201)
+@router.post(
+    "/",
+    response_model=APIResponse[dict],
+    status_code=201,
+    summary="Create Policy Type",
+    description="Create a new insurance plan type with base premium and max coverage. Restricted to Admin only."
+)
 def create_policy_type(
     body: PolicyTypeCreate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Create a new insurance plan type. (Admin only)"""
     cursor = db.cursor()
     try:
         cursor.execute(
@@ -73,13 +87,17 @@ def create_policy_type(
     )
 
 
-@router.put("/{type_id}", response_model=APIResponse)
+@router.put(
+    "/{type_id}",
+    response_model=APIResponse,
+    summary="Update Policy Type",
+    description="Update an existing insurance plan type. Updates only provided fields. Restricted to Admin only."
+)
 def update_policy_type(
     type_id: int,
     body: PolicyTypeUpdate,
     db: MySQLConnection = Depends(get_db),
 ):
-    """Update an existing insurance plan type. (Admin only)"""
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
@@ -110,9 +128,13 @@ def update_policy_type(
     return APIResponse(success=True, message="Policy type updated successfully")
 
 
-@router.delete("/{type_id}", response_model=APIResponse)
+@router.delete(
+    "/{type_id}",
+    response_model=APIResponse,
+    summary="Delete Policy Type",
+    description="Delete an insurance plan type. Restricted to Admin only."
+)
 def delete_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
-    """Delete an insurance plan type. (Admin only)"""
     cursor = db.cursor()
     try:
         cursor.execute("DELETE FROM policy_type WHERE type_id = %s", (type_id,))

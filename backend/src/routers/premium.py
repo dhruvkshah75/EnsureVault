@@ -1,52 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 from mysql.connector import MySQLConnection
 from src.database import get_db
 from src.models.common import APIResponse
+from src.models.premium import (
+    PremiumCalculateRequest,
+    PremiumCalculateResponse,
+    RiskFactorsResponse,
+)
 
 router = APIRouter(prefix="/premium", tags=["Premium Calculation"])
 
 
-class PremiumCalculateRequest(BaseModel):
-    customer_id: int = Field(..., gt=0)
-    type_id: int = Field(..., gt=0)
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {"customer_id": 1, "type_id": 1}
-            ]
-        }
-    }
-
-
-class PremiumCalculateResponse(BaseModel):
-    customer_id: int
-    type_id: int
-    type_name: str
-    base_premium: float
-    risk_multiplier: float
-    calculated_premium: float
-
-
-class RiskFactorsResponse(BaseModel):
-    type_id: int
-    type_name: str
-    base_premium: float
-    max_coverage: float
-    type_multiplier: float
-    description: str
-
-
-@router.post("/calculate", response_model=APIResponse)
+@router.post(
+    "/calculate",
+    response_model=APIResponse[PremiumCalculateResponse],
+    summary="Calculate Policy Premium",
+    description="Calculate the premium for a customer and policy type combination using the `calculate_premium` stored procedure. Restricted to Agent and Admin roles."
+)
 def calculate_premium(
     body: PremiumCalculateRequest,
     db: MySQLConnection = Depends(get_db),
 ):
-    """
-    Calculate the premium for a customer + policy type combination
-    using the calculate_premium stored procedure. (Agent, Admin)
-    """
     cursor = db.cursor(dictionary=True)
 
     # Verify customer exists
@@ -83,9 +57,13 @@ def calculate_premium(
     )
 
 
-@router.get("/factors/{type_id}", response_model=APIResponse)
+@router.get(
+    "/factors/{type_id}",
+    response_model=APIResponse[RiskFactorsResponse],
+    summary="Get Risk Factors",
+    description="Retrieve the risk factors and multipliers for a specific policy type."
+)
 def get_risk_factors(type_id: int, db: MySQLConnection = Depends(get_db)):
-    """Get risk factors and multipliers for a policy type."""
     cursor = db.cursor(dictionary=True)
     cursor.execute(
         "SELECT * FROM policy_type WHERE type_id = %s",
