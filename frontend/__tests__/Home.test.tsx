@@ -38,12 +38,12 @@ describe('Home Page', () => {
       })
 
     render(<Home />)
-    expect(screen.getByText(/Customer Portal/i)).toBeInTheDocument()
-    expect(screen.getByText(/Admin & Agents/i)).toBeInTheDocument()
+    expect(screen.getByText(/Admin Panel/i)).toBeInTheDocument()
+    expect(screen.getByText(/Policy Management/i)).toBeInTheDocument()
     expect(screen.getByText(/Risk Engine/i)).toBeInTheDocument()
   })
 
-  it('hides Admin & Agents card for customer role', () => {
+  it('hides Admin Panel for customer role', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useAuth } = require('@/context/AuthContext')
       ; (useAuth as jest.Mock).mockReturnValue({
@@ -53,6 +53,6 @@ describe('Home Page', () => {
 
     render(<Home />)
     expect(screen.getByText(/My Portfolio/i)).toBeInTheDocument()
-    expect(screen.queryByText(/Admin & Agents/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Admin Panel/i)).not.toBeInTheDocument()
   })
-})
+});

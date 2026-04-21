@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "../context/AuthContext";
+import Chatbot from "../components/Chatbot";
+import { ToastProvider } from "../components/Toast";
 import Navbar from "../components/Navbar";
 import "./globals.css";
 
@@ -28,10 +30,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-            {children}
-          </main>
+          <ToastProvider>
+            <Navbar />
+            <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+              {children}
+            </main>
+            <Chatbot />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

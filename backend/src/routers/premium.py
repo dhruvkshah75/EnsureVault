@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
-from src.models.common import APIResponse
+from src.models.common import APIResponse, ErrorResponse
 from src.models.premium import (
     PremiumCalculateRequest,
     PremiumCalculateResponse,
@@ -13,9 +14,22 @@ router = APIRouter(prefix="/premium", tags=["Premium Calculation"])
 
 @router.post(
     "/calculate",
-    response_model=APIResponse[PremiumCalculateResponse],
-    summary="Calculate Policy Premium",
-    description="Calculate the premium for a customer and policy type combination using the `calculate_premium` stored procedure. Restricted to Agent and Admin roles."
+    response_model=APIResponse,
+    summary="Calculate premium for a customer + policy type",
+    description=(
+        "Invoke the `calculate_premium` stored procedure to compute a "
+        "risk-adjusted premium for a given customer and policy type pair. "
+        "The response includes the base premium, risk multiplier, and "
+        "the final calculated premium.\n\n"
+        "**Constraints:**\n"
+        "- `customer_id` — must be a positive integer referencing an existing customer.\n"
+        "- `type_id` — must be a positive integer referencing an existing policy type."
+    ),
+    responses={
+        200: {"description": "Premium calculated successfully", "model": APIResponse},
+        404: {"description": "Customer or policy type not found", "model": ErrorResponse},
+        500: {"description": "Stored procedure execution failed", "model": ErrorResponse},
+    },
 )
 def calculate_premium(
     body: PremiumCalculateRequest,
@@ -43,7 +57,7 @@ def calculate_premium(
             pass
     except Exception as e:
         cursor.close()
-        raise HTTPException(status_code=500, detail=f"Premium calculation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Premium calculation failed: {str(e)}") from e
 
     cursor.close()
 
@@ -59,9 +73,17 @@ def calculate_premium(
 
 @router.get(
     "/factors/{type_id}",
-    response_model=APIResponse[RiskFactorsResponse],
-    summary="Get Risk Factors",
-    description="Retrieve the risk factors and multipliers for a specific policy type."
+    response_model=APIResponse,
+    summary="Get risk factors for a policy type",
+    description=(
+        "Retrieve the risk factors and type-specific multiplier for a given "
+        "policy type. Useful for the frontend to display how premiums are "
+        "derived before the customer commits."
+    ),
+    responses={
+        200: {"description": "Risk factors retrieved", "model": APIResponse},
+        404: {"description": "Policy type not found", "model": ErrorResponse},
+    },
 )
 def get_risk_factors(type_id: int, db: MySQLConnection = Depends(get_db)):
     cursor = db.cursor(dictionary=True)

@@ -1,6 +1,8 @@
-from typing import Optional, Generator
+from typing import Generator, Optional
+
 from mysql.connector import pooling
 from mysql.connector.pooling import PooledMySQLConnection
+
 from src.config import settings
 
 connection_pool: Optional[pooling.MySQLConnectionPool] = None

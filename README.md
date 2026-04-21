@@ -1,92 +1,120 @@
-# EnsureVault
+# EnsureVault - Insurance and claims Proccessing System
 
-**`EnsureVault` (Insurance Policy & Claims Processing System)** is a centralized database-driven application designed to automate the management of insurance policies, customer portfolios, and claim settlements. This project is built as part of the **CSF212 - Database Systems** course at **BITS Pilani, Goa Campus**.
+<p align="center">
+  <img src="./assets/LoginPage.png" alt="EnsureVault Login" width="800"/>
+</p>
 
-**EnsureVault** is an end-to-end, resilient relational database project that accurately maps the complex lifecycle of an insurance company—from product setup to customer acquisition, policy maintenance, and claim adjudication. It features a highly normalized schema (3NF/BCNF) and a modular architecture. The system enforces strict Role-Based Access Control (RBAC) across four key personas (Administrator, Agent, Customer, and Claims Manager) to guarantee data integrity, track all financial transactions via explicit contracts, and simulate real-world workflows.
-
----
-
-### **1. Install uv**
-
-If you haven't installed it yet, use one of the following commands:
-
-* **Via pip:** `pip install uv`
-* **Via Curl (macOS/Linux):** `curl -LsSf https://astral.sh/uv/install.sh | sh`
+**EnsureVault** is a comprehensive, secure, and professional insurance policy and claims management platform built with modern web technologies. Designed with a banking-grade user interface and robust backend architecture, EnsureVault streamlines the entire insurance lifecycle—from policy issuance to claims adjudication—providing a seamless experience for administrators, agents, customers, and claims managers.
 
 ---
 
-### **2. Initialize the Project**
+## Application Preview
 
-Navigate to your project root and initialize the `uv` structure:
+### Customer Dashboard
+<p align="center">
+  <img src="./assets/customerDash.png" alt="Customer Dashboard" width="800"/>
+</p>
 
-```bash
-uv init
+View active policies, submit claims, manage beneficiaries, and make premium payments—all in one place.
+
+---
+
+### Agent Dashboard
+<p align="center">
+  <img src="./assets/agentDash.png" alt="Agent Dashboard" width="800"/>
+</p>
+
+Manage client portfolios, issue new policies, and track performance metrics.
+
+---
+
+### Claims Manager Dashboard
+<p align="center">
+  <img src="./assets/claimsManagerDash.png" alt="Claims Manager Dashboard" width="800"/>
+</p>
+
+Review pending claims, verify evidence, and make adjudication decisions with comprehensive filtering options.
+
+---
+
+### Admin Dashboard
+<p align="center">
+  <img src="./assets/adminDash.png" alt="Admin Dashboard" width="800"/>
+</p>
+
+Manage system configuration, create policy types, and oversee agent operations.
+
+---
+
+## How EnsureVault Helps Users
+
+### **For Customers** 
+- **Easy Policy Management**: View all active insurance policies (Health, Home, Car) in one centralized dashboard
+- **Instant Premium Calculator**: Get real-time premium estimates based on age, risk factors, and coverage needs
+- **Simple Claims Submission**: File claims online with document upload support
+- **Transparent Tracking**: Monitor claim status and approval process in real-time
+- **Secure Payments**: Make premium payments through an integrated, PCI-DSS compliant payment gateway
+- **Beneficiary Management**: Add and manage policy beneficiaries with share percentage allocation
+
+### **For Insurance Agents** 
+- **Client Portfolio Management**: View and manage all customers assigned to you
+- **Policy Issuance**: Create new insurance policies for customers with automated premium calculation
+- **Performance Tracking**: Monitor your sales and commission metrics
+- **Quick Access Tools**: Use the premium calculator to provide instant quotes to prospects
+
+### **For Claims Managers** 
+- **Adjudication Queue**: Review pending claims with all supporting documentation
+- **Evidence Verification**: Access uploaded documents and incident details
+- **Decision Making**: Approve or reject claims with detailed reasoning
+- **Advanced Filtering**: Filter claims by region, policy type, and incident date
+- **Workload Visibility**: Track pending claims and total claim values at a glance
+
+### **For Administrators** 
+- **System Oversight**: Manage policy types, coverage rules, and premium structures
+- **Agent Management**: Create agent accounts and assign territories
+- **Analytics Dashboard**: Monitor system-wide metrics and financial data
+- **Policy Type Configuration**: Define new insurance products with custom rules and pricing
+
+---
+
+## How It Works
+
+### **1. User Authentication & Role-Based Access**
+EnsureVault implements strict Role-Based Access Control (RBAC):
+- **Customers** access their personal portfolio and claims
+- **Agents** manage their client base and issue policies
+- **Claims Managers** adjudicate submitted claims
+- **Admins** control system-wide configuration
+
+Each role has a tailored dashboard with only the relevant features, ensuring security and usability.
+
+### **2. Policy Lifecycle Management**
+```
+Admin creates policy type → Agent issues policy to customer → 
+Customer pays premiums → Policy becomes active → Coverage begins
 ```
 
-This creates a `pyproject.toml` file, which will act as the single source of truth for your project configuration.
-
----
-
-### **3. Add Dependencies**
-
-Instead of using a `requirements.txt`, add your packages directly. **uv** will automatically create a virtual environment and a `uv.lock` file to ensure consistency across all 6 team members.
-
-```bash
-# Core FastAPI dependencies
-uv add fastapi uvicorn
-
-# Raw SQL Database driver (No ORM as planned)
-uv add mysql-connector-python
+### **3. Claims Processing Workflow**
+```
+Customer files claim → Uploads supporting documents → 
+Claims Manager reviews evidence → Decision (Approve/Reject) → 
+If approved: Payout processed automatically
 ```
 
----
+### **4. Premium Calculation Engine**
+The system uses sophisticated algorithms to calculate premiums based on:
+- **Customer Age**: Younger customers get better rates
+- **Risk Factors**: Health conditions, vehicle type, property location
+- **Coverage Amount**: Higher coverage = higher premiums
+- **Policy Type**: Health, Home, or Car insurance have different pricing models
 
-### **4. Synchronize the Environment**
-
-Whenever a teammate pushes a change to the `pyproject.toml` or `uv.lock`, simply run:
-
-```bash
-uv sync
-```
-
-This ensures your local environment exactly matches the project's defined state.
-
----
-
-### **5. Run the Application**
-
-You do not need to "activate" the environment. Use `uv run` to execute commands within the context of your project's virtual environment:
-
-```bash
-uv run uvicorn src.main:app --reload
-```
+### **5. Secure Payment Processing**
+- Integrated payment gateway with SSL encryption
+- Support for Credit/Debit cards (Visa, Mastercard, RuPay)
+- PCI-DSS compliant payment handling
+- Real-time payment confirmation
 
 ---
 
-## Technology Stack
 
-* **Frontend:** Next.js (React), Tailwind CSS, ShadCN UI.
-* **Backend:** Python (FastAPI).
-* **Database:** MySQL 8.0.
 
----
-
-## System Architecture & Modules
-
-The system is divided into functional modules designed to handle high-concurrency financial logic directly within the database layer:
-
-* **Policy Management:** Defining insurance plans (Health, Car, Home) and coverage rules.
-* **Customer Portfolio:** Managing KYC, personal details, and policy history.
-* **Claims Submission:** Interface for reporting incidents and uploading documentation.
-* **Risk Assessment:** Module for adjusters to investigate and approve/deny claims.
-* **Premium Calculation:** Using Stored Procedures to automate cost analysis based on risk factors.
-* **Payouts & Finance:** Handling transactions while ensuring strict ACID properties.
-
----
-
-## Key DBMS Concepts Used
-
-* **Normalization:** Strictly follows BCNF/3NF to eliminate data redundancy.
-* **Triggers:** Enforces business constraints, such as preventing duplicate claims.
-* **Stored Procedures:** Offloads complex financial calculations from the backend to the database.
-* **Transactions:** Ensures Atomicity and Consistency during claim settlement and payment processing.

@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,7 @@ class Settings:
     DB_NAME: str = os.getenv("DB_NAME", "ensurevault") or "ensurevault"
 
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000") or "http://localhost:3000"
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "") or ""
     API_V1_PREFIX: str = "/api/v1"
 
 

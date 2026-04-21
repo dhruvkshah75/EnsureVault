@@ -33,6 +33,10 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=ensurevault
       - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
     depends_on:
       db:
         condition: service_healthy

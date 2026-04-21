@@ -12,6 +12,7 @@ const hints = [
     { label: "Customer", value: "amit.patel@email.com" },
     { label: "Customer", value: "sneha.iyer@email.com" },
     { label: "Agent", value: "rajesh.sharma@ensurevault.com" },
+    { label: "Manager", value: "manager@ensurevault.com" },
     { label: "Admin", value: "admin@ensurevault.com" },
 ];
 
@@ -31,7 +32,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const res = await fetch(`${API}/auth/login`, {
+            const res: Response = await fetch(`${API}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
@@ -39,10 +40,12 @@ export default function LoginPage() {
             const json = await res.json();
             if (!res.ok) throw new Error(json.detail ?? "Invalid credentials.");
 
-            const { name, role, user_id, customer_id } = json.data;
-            login(role, { name, user_id, customer_id });
+            const { name, role, user_id, customer_id, email: userEmail, kyc_status } = json.data;
+            login(role, { name, user_id, customer_id, email: userEmail, kyc_status });
 
             if (role === "customer") router.push("/customer/dashboard");
+            else if (role === "agent") router.push("/agent/dashboard");
+            else if (role === "claims_manager") router.push("/manager/dashboard");
             else router.push("/admin/policies/create");
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Login failed.");
@@ -143,8 +146,8 @@ export default function LoginPage() {
                                 >
                                     <span className="font-mono">{h.value}</span>
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${h.label === "Admin" ? "bg-red-100 text-red-700" :
-                                            h.label === "Agent" ? "bg-amber-100 text-amber-700" :
-                                                "bg-blue-100 text-blue-700"
+                                        h.label === "Agent" ? "bg-amber-100 text-amber-700" :
+                                            "bg-blue-100 text-blue-700"
                                         }`}>{h.label}</span>
                                 </button>
                             ))}

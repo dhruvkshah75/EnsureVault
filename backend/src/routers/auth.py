@@ -1,35 +1,38 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
-from src.models.common import APIResponse
+from src.models.auth import LoginRequest, LoginResponse, RegisterRequest
+from src.models.common import APIResponse, ErrorResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-class LoginRequest(BaseModel):
-    email: str
-
-
-class LoginResponse(BaseModel):
-    name: str
-    role: str          # "customer" | "agent" | "admin"
-    user_id: int
-    customer_id: int | None = None
-
-
-@router.post("/login", response_model=APIResponse)
+@router.post(
+    "/login",
+    response_model=APIResponse,
+    summary="Authenticate user by email",
+    description=(
+        "Resolve a user's identity and role from their email address. "
+        "The lookup order is:\n"
+        "1. **Customer table** — match by `email` column.\n"
+        "2. **Agent table** — match by derived email "
+        "(`lowercase(name).replace(' ', '.') + '@ensurevault.com'`).\n"
+        "3. **Admin** — hardcoded demo account `admin@ensurevault.com`.\n\n"
+        "Returns the user's name, role, and ID so the frontend can gate "
+        "access accordingly."
+    ),
+    responses={
+        200: {"description": "Login successful", "model": APIResponse},
+        401: {"description": "No account found for this email", "model": ErrorResponse},
+    },
+)
 def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
-    """
-    Resolve a user's role from their email address.
-    Checks the customer table first, then the agent table.
-    Returns user info and role so the frontend can gate access accordingly.
-    """
     cursor = db.cursor(dictionary=True)
 
     # 1. Check if email belongs to a customer
     cursor.execute(
-        "SELECT customer_id AS user_id, full_name AS name FROM customer WHERE email = %s",
+        "SELECT customer_id AS user_id, full_name AS name, email, kyc_status FROM customer WHERE email = %s",
         (body.email,),
     )
     customer = cursor.fetchone()
@@ -43,12 +46,12 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
                 role="customer",
                 user_id=customer["user_id"],
                 customer_id=customer["user_id"],
+                email=customer["email"],
+                kyc_status=customer["kyc_status"],
             ),
         )
 
     # 2. Check if email belongs to an agent
-    # Agents don't have emails in the schema; match by name@ensurevault.com convention
-    # We derive email as: lowercase(name).replace(" ", ".") + "@ensurevault.com"
     cursor.execute("SELECT agent_id AS user_id, name FROM agent", [])
     agents = cursor.fetchall()
     cursor.close()
@@ -63,6 +66,7 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
                     name=agent["name"],
                     role="agent",
                     user_id=agent["user_id"],
+                    email=derived_email,
                 ),
             )
 
@@ -71,7 +75,64 @@ def login(body: LoginRequest, db: MySQLConnection = Depends(get_db)):
         return APIResponse(
             success=True,
             message="Login successful",
-            data=LoginResponse(name="Admin", role="admin", user_id=0),
+            data=LoginResponse(name="Admin", role="admin", user_id=0, email="admin@ensurevault.com"),
+        )
+
+    # 4. Check for claims manager (hardcoded for demo)
+    if body.email.lower() == "manager@ensurevault.com":
+        return APIResponse(
+            success=True,
+            message="Login successful",
+            data=LoginResponse(name="Claims Manager", role="claims_manager", user_id=0, email="manager@ensurevault.com"),
         )
 
     raise HTTPException(status_code=401, detail="No account found with this email address.")
+
+@router.post(
+    "/register",
+    response_model=APIResponse,
+    summary="Register a new customer",
+    description="Creates a new customer record with the given name and email, assigned to a default agent.",
+    responses={
+        200: {"description": "Registration successful", "model": APIResponse},
+        400: {"description": "Email already exists", "model": ErrorResponse},
+    },
+)
+def register(body: RegisterRequest, db: MySQLConnection = Depends(get_db)):
+    cursor = db.cursor(dictionary=True)
+    
+    # Check if user is trying to register an internal email
+    if body.email.strip().lower().endswith("@ensurevault.com"):
+        raise HTTPException(status_code=400, detail="Cannot register customer accounts with the @ensurevault.com domain.")
+        
+    # Check if email already exists
+    cursor.execute("SELECT customer_id FROM customer WHERE email = %s", (body.email,))
+    if cursor.fetchone():
+        cursor.close()
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+        
+    # Get a default agent (e.g., the first agent)
+    if body.agent_id:
+        default_agent = body.agent_id
+    else:
+        cursor.execute("SELECT MIN(agent_id) AS default_agent FROM agent")
+        agent_row = cursor.fetchone()
+        default_agent = agent_row["default_agent"] if agent_row and agent_row["default_agent"] else 1
+    
+    # Insert new customer
+    try:
+        cursor.execute(
+            "INSERT INTO customer (full_name, email, kyc_status, agent_id) VALUES (%s, %s, 'Pending', %s)",
+            (body.name, body.email, default_agent)
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        raise HTTPException(status_code=500, detail="Failed to create account.") from e
+        
+    cursor.close()
+    return APIResponse(
+        success=True,
+        message="Registration successful"
+    )

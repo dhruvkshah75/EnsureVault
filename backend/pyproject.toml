@@ -9,4 +9,25 @@ dependencies = [
     "mysql-connector-python>=9.5.0",
     "python-dotenv>=1.2.1",
     "uvicorn>=0.40.0",
+    "google-generativeai>=0.8.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.3.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501", "B008"] # Ignore long lines and Depends() in defaults
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"

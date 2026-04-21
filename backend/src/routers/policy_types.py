@@ -1,22 +1,28 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from mysql.connector import MySQLConnection
+
 from src.database import get_db
+from src.models.common import APIResponse, ErrorResponse
 from src.models.policy_type import (
     PolicyTypeCreate,
-    PolicyTypeUpdate,
     PolicyTypeResponse,
+    PolicyTypeUpdate,
 )
-from src.models.common import APIResponse
 
 router = APIRouter(prefix="/policy-types", tags=["Policy Types"])
 
 
 @router.get(
     "/",
-    response_model=APIResponse[List[PolicyTypeResponse]],
-    summary="List All Policy Types",
-    description="List all available insurance plan types (e.g., Health, Car, Home) configured in the system."
+    response_model=APIResponse,
+    summary="List all policy types",
+    description=(
+        "Return every insurance plan category (Health, Car, Home) with its "
+        "base premium and maximum coverage. No authentication required."
+    ),
+    responses={
+        200: {"description": "All policy types returned", "model": APIResponse},
+    },
 )
 def list_policy_types(db: MySQLConnection = Depends(get_db)):
     cursor = db.cursor(dictionary=True)
@@ -32,9 +38,16 @@ def list_policy_types(db: MySQLConnection = Depends(get_db)):
 
 @router.get(
     "/{type_id}",
-    response_model=APIResponse[PolicyTypeResponse],
-    summary="Get Specific Policy Type",
-    description="Get specific details of an insurance plan type by its unique `type_id`."
+    response_model=APIResponse,
+    summary="Get a policy type by ID",
+    description=(
+        "Retrieve a single insurance plan type including its base premium and "
+        "maximum coverage limit."
+    ),
+    responses={
+        200: {"description": "Policy type found", "model": APIResponse},
+        404: {"description": "Policy type not found", "model": ErrorResponse},
+    },
 )
 def get_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
     cursor = db.cursor(dictionary=True)
@@ -54,10 +67,21 @@ def get_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
 
 @router.post(
     "/",
-    response_model=APIResponse[dict],
+    response_model=APIResponse,
     status_code=201,
-    summary="Create Policy Type",
-    description="Create a new insurance plan type with base premium and max coverage. Restricted to Admin only."
+    summary="Create a new policy type",
+    description=(
+        "Add a new insurance plan category. "
+        "`type_name` must be one of Health, Car, or Home. "
+        "`base_premium` must be > 0 and ≤ 1,000,000. "
+        "`max_coverage` must be > 0 and ≤ 100,000,000. "
+        "Admin-only operation."
+    ),
+    responses={
+        201: {"description": "Policy type created", "model": APIResponse},
+        400: {"description": "Validation error or duplicate entry", "model": ErrorResponse},
+        422: {"description": "Request body failed Pydantic validation", "model": ErrorResponse},
+    },
 )
 def create_policy_type(
     body: PolicyTypeCreate,
@@ -76,7 +100,7 @@ def create_policy_type(
         new_id = cursor.lastrowid
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 
@@ -90,8 +114,17 @@ def create_policy_type(
 @router.put(
     "/{type_id}",
     response_model=APIResponse,
-    summary="Update Policy Type",
-    description="Update an existing insurance plan type. Updates only provided fields. Restricted to Admin only."
+    summary="Update an existing policy type",
+    description=(
+        "Partially update an insurance plan type. Only supplied fields are "
+        "changed; omitted fields remain unchanged. "
+        "Admin-only operation."
+    ),
+    responses={
+        200: {"description": "Policy type updated", "model": APIResponse},
+        400: {"description": "No fields provided or DB error", "model": ErrorResponse},
+        404: {"description": "Policy type not found", "model": ErrorResponse},
+    },
 )
 def update_policy_type(
     type_id: int,
@@ -121,7 +154,7 @@ def update_policy_type(
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 
@@ -131,8 +164,17 @@ def update_policy_type(
 @router.delete(
     "/{type_id}",
     response_model=APIResponse,
-    summary="Delete Policy Type",
-    description="Delete an insurance plan type. Restricted to Admin only."
+    summary="Delete a policy type",
+    description=(
+        "Permanently remove an insurance plan type. "
+        "Will fail if existing policies reference this type. "
+        "Admin-only operation."
+    ),
+    responses={
+        200: {"description": "Policy type deleted", "model": APIResponse},
+        400: {"description": "Foreign key constraint — policies still reference this type", "model": ErrorResponse},
+        404: {"description": "Policy type not found", "model": ErrorResponse},
+    },
 )
 def delete_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
     cursor = db.cursor()
@@ -145,7 +187,7 @@ def delete_policy_type(type_id: int, db: MySQLConnection = Depends(get_db)):
         raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     finally:
         cursor.close()
 
